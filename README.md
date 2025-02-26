@@ -1,2 +1,13 @@
 # 6322_project
-Our reproducibility project for EECS 6322
+Reproducibility project for EECS 6322
+by Andrew Luther and Shahak Rozenblat
+
+Install dependencies with:
+
+```
+pip install -r requirements.txt
+```
+
+Download the ImageNet dataset here:
+https://image-net.org/index.php
+
