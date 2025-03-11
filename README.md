@@ -8,7 +8,6 @@ Install dependencies with:
 pip install -r requirements.txt
 ```
 
-To get started, we are using a smaller version of imagenet that only has 10 classes. 
-See https://github.com/fastai/imagenette?tab=readme-ov-file for the download.
-Use 160px download and extract to your project folder
+To install the dataset, go to:
+https://drive.google.com/file/d/1ymDYrGs9DSRicfZbSCDiOu0ikGDh5k6S/view?usp=sharing 
 

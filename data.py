@@ -2,6 +2,7 @@ import torch
 import torchvision.transforms as transforms
 from torchvision.io import read_image
 import pandas as pd
+import numpy as np
 import os
 
 from pathlib import Path
@@ -9,55 +10,45 @@ import matplotlib.pyplot as plt
 
 # reference: https://pytorch.org/tutorials/beginner/basics/data_tutorial.html 
 
-label_map = {
-    "n01440764": "tench",
-    "n02102040": "English springer",
-    "n02979186": "casette player",
-    "n03000684": "chain saw",
-    "n03028079": "church",
-    "n03394916": "French horn",
-    "n03417042": "garbage truck",
-    "n03425413": "gas pump",
-    "n03445777": "golf ball",
-    "n03888257": "parachute"
-}
-
-class ImageNetteDataset(torch.utils.data.Dataset):
-    def __init__(self, annotations_file, img_dir, transform=None, target_transform=None):
-        self.img_labels = pd.read_csv(annotations_file)
+class FSC147_Dataset(torch.utils.data.Dataset):
+    def __init__(self, csv_file, density_map_dir, img_dir, transform=None, target_transform=None):
+        self.filenames = pd.read_csv(csv_file)
+        self.density_map_dir = density_map_dir
         self.img_dir = img_dir
         self.transform = transform
         self.target_transform = target_transform
     
     def __len__(self):
-        return len(self.img_labels)
+        return len(self.filenames)
     
     def __getitem__(self, idx):
         # gets the directory of the image from the csv file (img_labels) and joins it with the image directory
-        img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
-        label = self.img_labels.iloc[idx, 1]
+        img_path = os.path.join(self.img_dir, self.filenames.iloc[idx, 1]) # image filename in 1st column
+        density_map_path = os.path.join(self.img_dir, self.filenames.iloc[idx, 2]) # density map filenam in 2nd column
+        
         image = read_image(img_path)
+        density_map = np.load(density_map_path)
 
         # apply any transformations that are specified
         if self.transform:
             image = self.transform(image)
         if self.target_transform:
-            label = self.target_transform(label)
+            density_map = self.target_transform(density_map)
         
-        return image, label
+        return image, density_map
     
 
 if __name__ == "__main__":
-    datasetPath = Path("imagenette2-160/noisy_imagenette.csv")
-    img_dir = Path("imagenette2-160")
-
+    img_dir = Path("data\FSC147_384_V2\images_384_VarV2")
+    density_map_dir = Path("data\FSC147_384_V2\gt_density_map_adaptive_384_VarV2")
+    csv_file = Path("data\dataset.csv")
     
     transform = transforms.Compose([
         transforms.CenterCrop(160), # cropped to be 160 by 160 images, this will autopad for smaller images
         transforms.Grayscale(1) # convert to a single grayscale channel
     ])
     
-    train_data = ImageNetteDataset(datasetPath, img_dir, transform=transform) 
+    train_data = FSC147_Dataset(csv_file, density_map_dir, img_dir, transform=transform) 
 
     batch_size = 64
     train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=True)
@@ -68,12 +59,10 @@ if __name__ == "__main__":
 
     # first img/label from batch
     img = train_features[0].squeeze()
-    label = label_map.get(train_labels[0]) # translate the label code to the actual label
 
     # display img
     plt.imshow(img, cmap="gray")
     plt.show()
-    print(label)
 
 
     
