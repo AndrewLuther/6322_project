@@ -32,6 +32,8 @@ class FSC147_Dataset(torch.utils.data.Dataset):
         image = read_image(img_path)
         density_map = torch.from_numpy(np.load(density_map_path))
 
+        image = image.to(torch.float)
+
         # apply any transformations that are specified
         if self.transform:
             image = self.transform(image)
@@ -63,44 +65,41 @@ class FSC147_Dataset(torch.utils.data.Dataset):
 # Create a training, test, or validation version of the FSC147 Dataset
 class Dataset_Creator():
     @staticmethod
-    def get_training_dataset():
-        csv_file = Path("data/csv/train_dataset.csv")
-        return Dataset_Creator._get_dataset(csv_file)
+    def get_training_dataset(transform=None):
+        csv_file = Path("../data/csv/train_dataset.csv")
+        return Dataset_Creator._get_dataset(csv_file, transform)
 
     @staticmethod
-    def get_test_dataset():
-        csv_file = Path("data/csv/test_dataset.csv")
-        return Dataset_Creator._get_dataset(csv_file)
+    def get_test_dataset(transform=None):
+        csv_file = Path("../data/csv/test_dataset.csv")
+        return Dataset_Creator._get_dataset(csv_file, transform)
 
     @staticmethod
-    def get_val_dataset():
-        csv_file = Path("data/csv/val_dataset.csv")
-        return Dataset_Creator._get_dataset(csv_file)
+    def get_val_dataset(transform=None):
+        csv_file = Path("../data/csv/val_dataset.csv")
+        return Dataset_Creator._get_dataset(csv_file, transform)
 
-    def _get_dataset(csv_file):
-        img_dir = Path("data/FSC147_384_V2/images_384_VarV2")
-        density_map_dir = Path("data/FSC147_384_V2/gt_density_map_adaptive_384_VarV2")
+    def _get_dataset(csv_file, transform):
+        img_dir = Path("../data/FSC147_384_V2/images_384_VarV2")
+        density_map_dir = Path("../data/FSC147_384_V2/gt_density_map_adaptive_384_VarV2")
 
         # parse json for the example bounding boxes
-        with open(Path("data/annotation_FSC147_384.json")) as annotation_json:
+        with open(Path("../data/annotation_FSC147_384.json")) as annotation_json:
             annotation_data = json.load(annotation_json)
 
-        return FSC147_Dataset(csv_file, density_map_dir, img_dir, annotation_data, transform=None, target_transform=None) 
+        return FSC147_Dataset(csv_file, density_map_dir, img_dir, annotation_data, transform=transform, target_transform=None) 
 
-def display_sample(dataset):
+def display_sample(train_images, train_dmaps, train_examples):
     """
     Display a random sample, its density map, and an example object from the given dataset
     """
-    # in paper a batch size of 1 is specified
-    train_loader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
-    train_images, train_dmaps, train_examples = next(iter(train_loader))
 
     # first img/dmap from batch
-    img = train_images[0].squeeze()
+    img = train_images[0].squeeze().to(torch.int)
     dmap = train_dmaps[0].squeeze()
 
     # get one example object from image
-    example = train_examples[0][0].squeeze()
+    example = train_examples[0][0].squeeze().to(torch.int)
     
     # ref: https://stackoverflow.com/questions/53623472/how-do-i-display-a-single-image-in-pytorch 
     # ref: https://stackoverflow.com/questions/41793931/plotting-images-side-by-side-using-matplotlib
@@ -114,11 +113,9 @@ def display_sample(dataset):
 
 if __name__ == "__main__":
     train_data = Dataset_Creator.get_training_dataset()
-    display_sample(train_data)
 
+    # in paper a batch size of 1 is specified
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=1, shuffle=True)
+    train_images, train_dmaps, train_examples = next(iter(train_loader))
 
-    
-
-
-
-
+    display_sample(train_images, train_dmaps, train_examples)

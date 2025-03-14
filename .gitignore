@@ -1,4 +1,3 @@
 .venv/
-tiny-imagenet-200/
-imagenette2-160/
 data/FSC147_384_V2
+.vscode/
