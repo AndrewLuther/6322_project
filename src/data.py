@@ -103,11 +103,13 @@ def display_sample(train_images, train_dmaps, train_examples):
     
     # ref: https://stackoverflow.com/questions/53623472/how-do-i-display-a-single-image-in-pytorch 
     # ref: https://stackoverflow.com/questions/41793931/plotting-images-side-by-side-using-matplotlib
-    f, axarr = plt.subplots(2,2)
-    axarr[0,0].imshow(img.permute(1,2,0))
-    axarr[0,1].imshow(dmap, cmap="gray")
-
-    axarr[1,1].imshow(example.permute(1,2,0))
+    f, axarr = plt.subplots(1, 3, figsize=(12, 4))
+    axarr[0].imshow(img.permute(1, 2, 0))
+    axarr[0].set_title("Original Image")
+    axarr[1].imshow(dmap, cmap="gray")
+    axarr[1].set_title("Density Map")
+    axarr[2].imshow(example.permute(1, 2, 0))
+    axarr[2].set_title("Exemplar Image")
 
     plt.show()
 

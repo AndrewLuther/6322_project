@@ -1,3 +1,5 @@
 .venv/
 data/FSC147_384_V2
 .vscode/
+
+__pycache__/
