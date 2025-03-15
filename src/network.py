@@ -49,8 +49,19 @@ class FeatureExtractionModule(nn.Module):
         for param in resnet.parameters():
             param.requires_grad = False
 
+        
+        # Extract first four blocks of ResNet-50
+        # ref: https://github.com/pytorch/vision/blob/95131de394543a7c34bd51932bdfce21dae516c1/torchvision/models/resnet.py#L197-L212
+        self.block1 = nn.Sequential(*list(resnet.children())[:4])  # conv1 + bn1 + relu + maxpool1
+        self.block2 = list(resnet.children())[4]  # Layer 1
+        self.block3 = list(resnet.children())[5]  # Layer 2
+        self.block4 = list(resnet.children())[6]  # Layer 3
+
     def forward(self, x):
-        pass
+        x = self.block1(x)
+        x = self.block2(x)
+        f_map1 = self.block3(x)  # Feature maps from third block
+        f_map2 = self.block4(f_map1)  # Feature maps from fourth block
 
 class FamNet(nn.Module):
     def __init__(self):
