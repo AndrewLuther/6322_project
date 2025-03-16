@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.models import resnet50, ResNet50_Weights
+from data import Dataset_Creator
 
 class DensityPredictionModule(nn.Module):
     def __init__(self, in_channels, out_channels):
@@ -62,6 +63,8 @@ class FeatureExtractionModule(nn.Module):
         f_map1 = self.block3(x)  # Feature maps from third block
         f_map2 = self.block4(f_map1)  # Feature maps from fourth block
 
+        return f_map1, f_map2
+
 class FamNet(nn.Module):
     def __init__(self):
         pass 
@@ -71,3 +74,20 @@ class FamNet(nn.Module):
         input: x => images input of shape [B, 3 , H, W] 
         """
         pass
+
+if __name__ == "__main__":
+
+    # Testing code
+    train_data = Dataset_Creator.get_training_dataset()
+
+    # in paper a batch size of 1 is specified
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=1, shuffle=True)
+    train_images, train_dmaps, train_examples = next(iter(train_loader))
+
+    model = FeatureExtractionModule()
+    model.train(False)
+
+    features1, features2 = model(train_images)
+    print(features2)
+    
+
