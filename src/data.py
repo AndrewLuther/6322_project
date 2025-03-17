@@ -45,6 +45,8 @@ class FSC147_Dataset(torch.utils.data.Dataset):
             # ref https://stackoverflow.com/questions/71957324/is-there-a-pytorch-transform-to-go-from-1-channel-data-to-3-channels
             image = torch.cat([image, image, image], dim=0)
 
+        # TODO may just need to return the bounding box coordinates themselves here, instead of the actual examples,
+        # or maybe both? Seems like ROI takes bounding box as input
         examples = self._get_object_examples(image, img_name)
         return image, density_map, examples
     

@@ -63,6 +63,19 @@ class FeatureExtractionModule(nn.Module):
         f_map1 = self.block3(x)  # Feature maps from third block
         f_map2 = self.block4(f_map1)  # Feature maps from fourth block
 
+        # TODO Next we need to perform ROI pooling with the bounding boxes of the exemplar objects
+        # This will involve this ROI pytorch function which will take f_map1 and f_map2 as input,
+        # along with the bounding boxes from the dataloader
+        # https://pytorch.org/vision/main/generated/torchvision.ops.roi_pool.html
+
+        # Then our ROI Pooled exemplar features will be scaled to 0.9, 1.1 and original (I guess that's 1?)
+
+        # Then the output of the scaled ROI pooling and the f_map1 and f_map2 go into our correlation layer, 
+        # still trying to figure out what that is...
+
+        # This will give multiple correlation maps, for each different scale, which are concatenated and are then 
+        # the output of this module (this is what will then be fed into our density prediction module)
+
         return f_map1, f_map2
 
 class FamNet(nn.Module):
