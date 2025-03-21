@@ -104,6 +104,11 @@ class Dataset_Creator():
         with open(Path("../data/annotation_FSC147_384.json")) as annotation_json:
             annotation_data = json.load(annotation_json)
 
+        target_transform = transforms.Compose([
+            transforms.Resize((384, 384)),  
+            transforms.ToTensor()
+        ])
+
         return FSC147_Dataset(csv_file, density_map_dir, img_dir, annotation_data, transform=transform, target_transform=None) 
 
 def display_sample(train_images, train_dmaps, train_examples):

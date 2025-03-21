@@ -20,17 +20,13 @@ class DensityPredictionModule(nn.Module):
 
     def forward(self, x):
         x = self.conv1(x)
-        # Right now I just gussesd these params, really not sure what to set them too as of now
-        # It's supposed to Upsample so I assume a scale_factor=1.0 is wrong, they do mention they scale
-        # 0.9 to 1.1 but i couldn't figure out if that was preprocessing step or the upsample step, 
-        # I assume preprocessing since 0.9 isn't an upsample? 
-        x = F.interpolate(x, scale_factor=1.0, mode='bilinear', align_corners=False)
+        x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=False)
 
         x = self.conv2(x)
-        x = F.interpolate(x, scale_factor=1.0, mode='bilinear', align_corners=False)
+        x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=False)
 
         x = self.conv3(x)
-        x = F.interpolate(x, scale_factor=1.0, mode='bilinear', align_corners=False)
+        x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=False)
 
         x = self.conv4(x)
         x = self.conv5(x)
@@ -44,10 +40,11 @@ class FeatureCorrelationModule(nn.Module):
         super(FeatureCorrelationModule, self).__init__()
 
     def forward(self, f_map, scaled_f_map):
-        # f_map: torch.Size([1, 512, 48, 86])
+        # f_map: torch.Size([1, 512, H, W])
         # scaled_f_map:  torch.Size([3, 512, 7, 7])
         # ref : https://pytorch.org/docs/stable/generated/torch.nn.functional.conv2d.html
-        correlation_map = F.conv2d(f_map, scaled_f_map, stride=1, padding=0)
+        # padding = 3 preserves the size
+        correlation_map = F.conv2d(f_map, scaled_f_map, stride=1, padding=3)
 
         return correlation_map
     
@@ -65,6 +62,7 @@ class ROIPool(nn.Module):
 
         # Concatenate the indices to the second column of bboxes
         # this gives shape [B, 5] or [K, 5] in the docs, where K is number of elements
+        # This is required as read here : https://pytorch.org/vision/main/_modules/torchvision/ops/roi_pool.html#roi_pool
         bboxes = torch.cat([bboxes[:, :1], indices, bboxes[:, 1:]], dim=1)
 
         pooled_outputs = []
@@ -77,13 +75,13 @@ class ROIPool(nn.Module):
             )
             pooled_outputs.append(pooled_output)
         
+        # concatenate them along the batch dim
         pooled_outputs = torch.cat(pooled_outputs, dim=0)
         return pooled_outputs
 
 class FeatureExtractionModule(nn.Module):
     def __init__(self):
         super(FeatureExtractionModule, self).__init__()
-        
         # Load pre-trained ResNet-50 and freeze parameters
         # ref: https://pytorch.org/vision/0.9/models.html
         # ref: https://pytorch.org/vision/main/models/generated/torchvision.models.resnet50.html#torchvision.models.ResNet50_Weights
@@ -111,18 +109,23 @@ class FamNet(nn.Module):
         self.feature_extraction = FeatureExtractionModule()
         self.roi_pool = ROIPool()
         self.feature_correlation = FeatureCorrelationModule()
-        self.density_prediction = DensityPredictionModule(in_channels=3, out_channels=64)
+        # 6 in channels (3 from each of the roi_pool we do)
+        # 64 out channels is a guess as the paper doesn't specify this
+        self.density_prediction = DensityPredictionModule(in_channels=6, out_channels=64)
 
     def forward(self, x, bboxes):
         f_map1, f_map2 = self.feature_extraction(x)
 
         # Compute spatial scale as (feature map size / image size)
-        # using height here to compute scale
+        # using height here to compute scale, using wdith will give the same result
+        # Need to do this because the bounding boxes provided are for the 
+        # original input x, f_map1 and f_map2 are no longer the same spatial sizes.
+        # Therefor, we need to re-align the bounding boxes for each of them
         scale1 =  f_map1.shape[2] / x.shape[2]  # gives 0.125,
         scale2 =  f_map2.shape[2] / x.shape[2] # gives 0.0625
 
-        bboxes_1 = self._scale_bboxes(bboxes.clone(), scale=scale1)
-        bboxes_2 = self._scale_bboxes(bboxes.clone(), scale=scale2)
+        bboxes_1 = bboxes.clone() / scale1
+        bboxes_2 = bboxes.clone() / scale2
 
         scaled_f_map1 = self.roi_pool(f_map1, bboxes_1)
         scaled_f_map2 = self.roi_pool(f_map2, bboxes_2)
@@ -135,33 +138,9 @@ class FamNet(nn.Module):
         # howerver they are not the same size, c_map_2 is smaller than c_map_1, therefor
         # need to upsample c_map_2.
         c_map_2 = F.interpolate(c_map_2, size=c_map_1.shape[2:], mode='bilinear', align_corners=False)
-        d_map_input = torch.cat((c_map_1, c_map_2), dim=0) # torch.Size([2, 3, 42, 45])
+        d_map_input = torch.cat((c_map_1, c_map_2), dim=1) # along the channel dimension
 
         return self.density_prediction(d_map_input)
-       
-    def _scale_bboxes(self, bboxes, scale = 1):
-        """
-        Scales bounding boxe around their center by a given scale factor.
-        """
-        x1, y1 = bboxes[:, 0], bboxes[:, 1]
-        x2, y2 = bboxes[:, 2], bboxes[:, 3]
-
-        # Compute center
-        cx = (x1 + x2) / 2
-        cy = (y1 + y2) / 2
-
-        # Scale width and height
-        w = (x2 - x1) * scale
-        h = (y2 - y1) * scale
-
-        # Reconstruct scaled box
-        scaled_x1 = cx - w / 2
-        scaled_y1 = cy - h / 2
-        scaled_x2 = cx + w / 2
-        scaled_y2 = cy + h / 2
-
-        # Stack back into [K, 4]
-        return torch.stack([scaled_x1, scaled_y1, scaled_x2, scaled_y2], dim=1)
 
     
 
