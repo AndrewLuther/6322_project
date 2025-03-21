@@ -1,32 +1,29 @@
 import torch
 
-from network import FeatureExtractionModule
-from data import Dataset_Creator
-
+from data import Dataset_Creator, display_sample, display_prediction
+from network import FamNet
 
 def train_FamNet():
+
+    # Testing code
     train_data = Dataset_Creator.get_training_dataset()
 
     # in paper a batch size of 1 is specified
     train_loader = torch.utils.data.DataLoader(train_data, batch_size=1, shuffle=True)
+    train_images, train_dmaps, train_examples, train_bboxes = next(iter(train_loader))
 
-    # eventually this will be a loop through the data
-    train_images, train_dmaps, train_examples = next(iter(train_loader))
+    # TO DO: this should be done already beforehand
+    # get rid of channel dimension, not needed for bboxes
+    train_bboxes = train_bboxes[:, 0, :] 
 
-    model = FeatureExtractionModule()
-    
-    # will be true
+    # # display_sample(train_images, train_dmaps, train_examples)
+
+    model = FamNet()
     model.train(False)
 
-    # extract features from the image
-    image_features1, image_features2 = model(train_images)
+    pred = model(train_images, train_bboxes)
+    display_prediction(train_images, train_dmaps, pred)
 
-    # extract features from first example
-    example_features1, example_features2 = model(train_examples[0])
-
-    # how do we correlate between these? They are different sizes
-    print(image_features1.size())
-    print(example_features1.size())
 
 
 if __name__ == "__main__":

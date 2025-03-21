@@ -48,7 +48,8 @@ class FSC147_Dataset(torch.utils.data.Dataset):
         # TODO may just need to return the bounding box coordinates themselves here, instead of the actual examples,
         # or maybe both? Seems like ROI takes bounding box as input
         examples = self._get_object_examples(image, img_name)
-        return image, density_map, examples
+        bboxes = self._get_object_bboxes(img_name)
+        return image, density_map, examples, bboxes
     
     def _get_object_examples(self, image, img_name):
         # get the example bbox annotations
@@ -63,6 +64,20 @@ class FSC147_Dataset(torch.utils.data.Dataset):
             examples.append(example)
         
         return examples
+    
+    def _get_object_bboxes(self, img_name):
+        """
+        Extracts exemplar bounding boxes in (x1, y1, x2, y2) format from annotation data.
+        """
+        coordinates = self.annotation_data.get(img_name).get("box_examples_coordinates")
+        boxes = []
+
+        for bbox in coordinates:
+            x1, y1 = int(bbox[0][1]), int(bbox[0][0])
+            x2, y2 = int(bbox[2][1]), int(bbox[2][0])
+            boxes.append([x1, y1, x2, y2])
+
+        return torch.tensor(boxes, dtype=torch.float32)
 
 # Create a training, test, or validation version of the FSC147 Dataset
 class Dataset_Creator():
@@ -112,6 +127,28 @@ def display_sample(train_images, train_dmaps, train_examples):
     axarr[1].set_title("Density Map")
     axarr[2].imshow(example.permute(1, 2, 0))
     axarr[2].set_title("Exemplar Image")
+
+    plt.show()
+
+def display_prediction(train_images, train_dmaps, pred_dmaps):
+    """
+    Display a random sample, its density map, and an example object from the given dataset
+    """
+
+    # first img/dmap from batch
+    img = train_images[0].squeeze().to(torch.int)
+    dmap = train_dmaps[0].squeeze()
+    pred_dmap = pred_dmaps[0].squeeze().detach().cpu().numpy()
+
+    # ref: https://stackoverflow.com/questions/53623472/how-do-i-display-a-single-image-in-pytorch 
+    # ref: https://stackoverflow.com/questions/41793931/plotting-images-side-by-side-using-matplotlib
+    f, axarr = plt.subplots(1, 3, figsize=(12, 4))
+    axarr[0].imshow(img.permute(1, 2, 0))
+    axarr[0].set_title("Original Image")
+    axarr[1].imshow(dmap, cmap="gray")
+    axarr[1].set_title("Density Map")
+    axarr[2].imshow(pred_dmap, cmap="gray")
+    axarr[2].set_title("Precition Density Map")
 
     plt.show()
 
