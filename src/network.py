@@ -123,9 +123,8 @@ class FamNet(nn.Module):
         # Therefor, we need to re-align the bounding boxes for each of them
         scale1 =  f_map1.shape[2] / x.shape[2]  # gives 0.125,
         scale2 =  f_map2.shape[2] / x.shape[2] # gives 0.0625
-
-        bboxes_1 = bboxes.clone() / scale1
-        bboxes_2 = bboxes.clone() / scale2
+        bboxes_1 = self._scale_bboxes(bboxes.clone(), scale1, f_map1.shape[2], f_map1.shape[3])
+        bboxes_2 = self._scale_bboxes(bboxes.clone(), scale2, f_map2.shape[2], f_map2.shape[3])
 
         scaled_f_map1 = self.roi_pool(f_map1, bboxes_1)
         scaled_f_map2 = self.roi_pool(f_map2, bboxes_2)
@@ -141,6 +140,22 @@ class FamNet(nn.Module):
         d_map_input = torch.cat((c_map_1, c_map_2), dim=1) # along the channel dimension
 
         return self.density_prediction(d_map_input)
+    
+    def _scale_bboxes(self, bboxes, scale, H, W):
+        # Need to make sure they do go out of bounds, 
+        # Otherwise we will be getting nan results
+        bboxes = torch.round(bboxes.clone() * scale)
+        
+        bboxes[:, 0] = bboxes[:, 0].clamp(0, W - 1)  # x1
+        bboxes[:, 1] = bboxes[:, 1].clamp(0, H - 1)  # y1
+        bboxes[:, 2] = bboxes[:, 2].clamp(0, W - 1)  # x2
+        bboxes[:, 3] = bboxes[:, 3].clamp(0, H - 1)  # y2
+
+        return bboxes
+
+
+
+
 
     
 
