@@ -58,18 +58,19 @@ class ROIPool(nn.Module):
         # ref: https://pytorch.org/vision/main/generated/torchvision.ops.box_convert.html
         # ref: https://pytorch.org/vision/main/generated/torchvision.ops.roi_pool.html
 
-        indices = torch.arange(len(bboxes)).unsqueeze(1)  # Shape (B, 1)
+        batch_indices = torch.arange(len(bboxes)).unsqueeze(1)  # Shape (B, 1)
 
         # Concatenate the indices to the second column of bboxes
         # this gives shape [B, 5] or [K, 5] in the docs, where K is number of elements
         # This is required as read here : https://pytorch.org/vision/main/_modules/torchvision/ops/roi_pool.html#roi_pool
-        bboxes = torch.cat([bboxes[:, :1], indices, bboxes[:, 1:]], dim=1)
+        rois = torch.cat([batch_indices, bboxes], dim=1) 
+        # print(rois.shape) -> torch.Size([1, 5])
 
         pooled_outputs = []
         for scale in self.scales:
             pooled_output = roi_pool(
                 feature_map,
-                boxes=bboxes,
+                boxes=rois,
                 output_size=self.output_size,
                 spatial_scale=scale
             )
@@ -142,14 +143,15 @@ class FamNet(nn.Module):
         return self.density_prediction(d_map_input)
     
     def _scale_bboxes(self, bboxes, scale, H, W):
-        # Need to make sure they do go out of bounds, 
-        # Otherwise we will be getting nan results
-        bboxes = torch.round(bboxes.clone() * scale)
+        # scale bboxes
+        scaled_bboxes = torch.round(bboxes.clone() * scale)
         
-        bboxes[:, 0] = bboxes[:, 0].clamp(0, W - 1)  # x1
-        bboxes[:, 1] = bboxes[:, 1].clamp(0, H - 1)  # y1
-        bboxes[:, 2] = bboxes[:, 2].clamp(0, W - 1)  # x2
-        bboxes[:, 3] = bboxes[:, 3].clamp(0, H - 1)  # y2
+        # Need to make sure they do not go out of bounds, 
+        # Otherwise we will be getting nan results
+        scaled_bboxes[:, 0] = scaled_bboxes[:, 0].clamp(0, W - 1)  # x1
+        scaled_bboxes[:, 1] = scaled_bboxes[:, 1].clamp(0, H - 1)  # y1
+        scaled_bboxes[:, 2] = scaled_bboxes[:, 2].clamp(0, W - 1)  # x2
+        scaled_bboxes[:, 3] = scaled_bboxes[:, 3].clamp(0, H - 1)  # y2
 
         return bboxes
 
