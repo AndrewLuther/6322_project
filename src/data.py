@@ -9,6 +9,8 @@ import json
 from pathlib import Path
 import matplotlib.pyplot as plt
 
+from util import Util
+
 # reference: https://pytorch.org/tutorials/beginner/basics/data_tutorial.html 
 
 class FSC147_Dataset(torch.utils.data.Dataset):
@@ -45,25 +47,8 @@ class FSC147_Dataset(torch.utils.data.Dataset):
             # ref https://stackoverflow.com/questions/71957324/is-there-a-pytorch-transform-to-go-from-1-channel-data-to-3-channels
             image = torch.cat([image, image, image], dim=0)
 
-        # TODO may just need to return the bounding box coordinates themselves here, instead of the actual examples,
-        # or maybe both? Seems like ROI takes bounding box as input
-        examples = self._get_object_examples(image, img_name)
         bboxes = self._get_object_bboxes(img_name)
-        return image, density_map, examples, bboxes
-    
-    def _get_object_examples(self, image, img_name):
-        # get the example bbox annotations
-        coordinates = self.annotation_data.get(img_name).get("box_examples_coordinates")
-        examples = []
-        for bbox in coordinates:
-            # crop the image to the bbox, only need top left point and bottom right point
-            x1=[int(bbox[0][1]), int(bbox[0][0])]
-            x2=[int(bbox[2][1]), int(bbox[2][0])]
-            # add 1 because slice operators don't include larger index
-            example = image[:, x1[0]:x2[0]+1, x1[1]:x2[1]+1]
-            examples.append(example)
-        
-        return examples
+        return image, density_map, bboxes
     
     def _get_object_bboxes(self, img_name):
         """
@@ -73,6 +58,7 @@ class FSC147_Dataset(torch.utils.data.Dataset):
         boxes = []
 
         for bbox in coordinates:
+            # only need the top left and bottom right points
             x1, y1 = int(bbox[0][1]), int(bbox[0][0])
             x2, y2 = int(bbox[2][1]), int(bbox[2][0])
             boxes.append([x1, y1, x2, y2])
@@ -104,14 +90,9 @@ class Dataset_Creator():
         with open(Path("../data/annotation_FSC147_384.json")) as annotation_json:
             annotation_data = json.load(annotation_json)
 
-        target_transform = transforms.Compose([
-            transforms.Resize((384, 384)),  
-            transforms.ToTensor()
-        ])
-
         return FSC147_Dataset(csv_file, density_map_dir, img_dir, annotation_data, transform=transform, target_transform=None) 
 
-def display_sample(train_images, train_dmaps, train_examples):
+def display_sample(train_images, train_dmaps, train_bboxes):
     """
     Display a random sample, its density map, and an example object from the given dataset
     """
@@ -121,7 +102,8 @@ def display_sample(train_images, train_dmaps, train_examples):
     dmap = train_dmaps[0].squeeze()
 
     # get one example object from image
-    example = train_examples[0][0].squeeze().to(torch.int)
+    examples = Util.get_examples_from_bboxes(img, train_bboxes)
+    example = examples[0].squeeze().to(torch.int)
     
     # ref: https://stackoverflow.com/questions/53623472/how-do-i-display-a-single-image-in-pytorch 
     # ref: https://stackoverflow.com/questions/41793931/plotting-images-side-by-side-using-matplotlib
@@ -153,7 +135,7 @@ def display_prediction(train_images, train_dmaps, pred_dmaps):
     axarr[1].imshow(dmap, cmap="gray")
     axarr[1].set_title("Density Map")
     axarr[2].imshow(pred_dmap, cmap="gray")
-    axarr[2].set_title("Precition Density Map")
+    axarr[2].set_title("Prediction Density Map")
 
     plt.show()
 
@@ -162,6 +144,6 @@ if __name__ == "__main__":
 
     # in paper a batch size of 1 is specified
     train_loader = torch.utils.data.DataLoader(train_data, batch_size=1, shuffle=True)
-    train_images, train_dmaps, train_examples = next(iter(train_loader))
+    train_images, train_dmaps, train_bboxes = next(iter(train_loader))
 
-    display_sample(train_images, train_dmaps, train_examples)
+    display_sample(train_images, train_dmaps, train_bboxes[0])
