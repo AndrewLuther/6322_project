@@ -4,7 +4,7 @@ import skimage
 
 from util import Util
 
-# Loss calulations used for test-time adaptation (*** Only used at test time, not during training)
+# Loss calculations used for test-time adaptation (*** Only used at test time, not during training)
 class Loss():
     @staticmethod
     def _min_count_loss(density_map, bboxes):
