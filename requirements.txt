@@ -5,3 +5,4 @@ torchaudio
 numpy == 2.2.2
 pandas == 2.2.3
 matplotlib
+scikit-image
