@@ -7,7 +7,7 @@ from torchvision.ops import roi_pool
 class DensityPredictionModule(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(DensityPredictionModule, self).__init__()
-
+        
         #5 convolutional blocks (Conv2d + ReLU)
         self.conv1 = nn.Sequential(nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1), nn.ReLU())
         self.conv2 = nn.Sequential(nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1), nn.ReLU())
@@ -32,20 +32,26 @@ class DensityPredictionModule(nn.Module):
         x = self.conv5(x)
 
         x = self.final_conv(x)
-
+        # Since depending on the number of examplars we give
+        # We can have more than one examplar here on the batch dimension
+        # So we max them to get a single result
+        # Max was chosen but can also use mean
+        x, _ = torch.max(x, dim=0, keepdim=True) 
         return x
     
 class FeatureCorrelationModule(nn.Module):
     def __init__(self):
         super(FeatureCorrelationModule, self).__init__()
 
-    def forward(self, f_map, scaled_f_map):
-        # f_map: torch.Size([1, 512, H, W])
-        # scaled_f_map:  torch.Size([3, 512, 7, 7])
+    def forward(self, image_feature, examplar_feature):
         # ref : https://pytorch.org/docs/stable/generated/torch.nn.functional.conv2d.html
         # padding = 3 preserves the size
-        correlation_map = F.conv2d(f_map, scaled_f_map, stride=1, padding=3)
 
+        # Was getting "inf" values in the correlation_map
+        # Going to normalize to avoid inf/nan from large values
+        examplar_feature = F.normalize(examplar_feature, p=2, dim=1)
+
+        correlation_map = F.conv2d(image_feature, examplar_feature, stride=1, padding=3)
         return correlation_map
     
 class ROIPool(nn.Module):
@@ -60,11 +66,10 @@ class ROIPool(nn.Module):
 
         batch_indices = torch.arange(len(bboxes)).unsqueeze(1)  # Shape (B, 1)
 
-        # Concatenate the indices to the second column of bboxes
+        # Concatenate the indices to the first column of bboxes
         # this gives shape [B, 5] or [K, 5] in the docs, where K is number of elements
         # This is required as read here : https://pytorch.org/vision/main/_modules/torchvision/ops/roi_pool.html#roi_pool
         rois = torch.cat([batch_indices, bboxes], dim=1) 
-        # print(rois.shape) -> torch.Size([1, 5])
 
         pooled_outputs = []
         for scale in self.scales:
@@ -74,10 +79,8 @@ class ROIPool(nn.Module):
                 output_size=self.output_size,
                 spatial_scale=scale
             )
-            pooled_outputs.append(pooled_output)
+            pooled_outputs.append(pooled_output) 
         
-        # concatenate them along the batch dim
-        pooled_outputs = torch.cat(pooled_outputs, dim=0)
         return pooled_outputs
 
 class FeatureExtractionModule(nn.Module):
@@ -110,50 +113,45 @@ class FamNet(nn.Module):
         self.feature_extraction = FeatureExtractionModule()
         self.roi_pool = ROIPool()
         self.feature_correlation = FeatureCorrelationModule()
-        # 6 in channels (3 from each of the roi_pool we do)
-        # 64 out channels is a guess as the paper doesn't specify this
-        self.density_prediction = DensityPredictionModule(in_channels=6, out_channels=64)
+        self.density_prediction = DensityPredictionModule(in_channels=6, out_channels=64)  # 6 from concatenating 3+3 maps
 
     def forward(self, x, bboxes):
+        bboxes = bboxes.squeeze(0)
+        # Extract features from both scales
         f_map1, f_map2 = self.feature_extraction(x)
+        target_size = f_map1.shape[2:]
 
-        # Compute spatial scale as (feature map size / image size)
-        # using height here to compute scale, using wdith will give the same result
-        # Need to do this because the bounding boxes provided are for the 
-        # original input x, f_map1 and f_map2 are no longer the same spatial sizes.
-        # Therefor, we need to re-align the bounding boxes for each of them
-        scale1 =  f_map1.shape[2] / x.shape[2]  # gives 0.125,
-        scale2 =  f_map2.shape[2] / x.shape[2] # gives 0.0625
-        bboxes_1 = self._scale_bboxes(bboxes.clone(), scale1, f_map1.shape[2], f_map1.shape[3])
-        bboxes_2 = self._scale_bboxes(bboxes.clone(), scale2, f_map2.shape[2], f_map2.shape[3])
+        f_maps = [f_map1, f_map2]
+        c_maps = []
 
-        scaled_f_map1 = self.roi_pool(f_map1, bboxes_1)
-        scaled_f_map2 = self.roi_pool(f_map2, bboxes_2)
+        for f_map in f_maps:
+            scaleW = f_map.shape[2] / x.shape[2] # x scale
+            scaleH = f_map.shape[3] / x.shape[3] # y scale
+            scaled_bboxes = self._scale_bboxes(bboxes, scaleW, scaleH, f_map.shape[2], f_map.shape[3])
+            exemplar_fs = self.roi_pool(f_map, scaled_bboxes)
 
-        c_map_1 = self.feature_correlation(f_map1, scaled_f_map1)
-        c_map_2 = self.feature_correlation(f_map2, scaled_f_map2)
+            # for each of the scaled features (scales of 0.9, 1.0, 1.1)
+            for exemplar_f in exemplar_fs:
+                c_map = self.feature_correlation(f_map, exemplar_f)
+                c_map = F.interpolate(c_map, size=target_size, mode='bilinear', align_corners=False)
+                c_maps.append(c_map)
         
-        # from the paper it says: 
-        # "The correlation maps are concatenated and fed into the density prediction module."
-        # howerver they are not the same size, c_map_2 is smaller than c_map_1, therefor
-        # need to upsample c_map_2.
-        c_map_2 = F.interpolate(c_map_2, size=c_map_1.shape[2:], mode='bilinear', align_corners=False)
-        d_map_input = torch.cat((c_map_1, c_map_2), dim=1) # along the channel dimension
-
-        return self.density_prediction(d_map_input)
+        # We want to concatenate the correlation maps such that
+        # we have 6 channels, 3 channels for each of the scales, and then for each of the
+        # feature maps from the third and fourth blocks  
+        c_maps = torch.cat(c_maps, dim=0).permute(1, 0, 2, 3) # shpae [B, 6, H, W]
+        return self.density_prediction(c_maps)
     
-    def _scale_bboxes(self, bboxes, scale, H, W):
-        # scale bboxes
-        scaled_bboxes = torch.round(bboxes.clone() * scale)
-        
-        # Need to make sure they do not go out of bounds, 
-        # Otherwise we will be getting nan results
-        scaled_bboxes[:, 0] = scaled_bboxes[:, 0].clamp(0, W - 1)  # x1
-        scaled_bboxes[:, 1] = scaled_bboxes[:, 1].clamp(0, H - 1)  # y1
-        scaled_bboxes[:, 2] = scaled_bboxes[:, 2].clamp(0, W - 1)  # x2
-        scaled_bboxes[:, 3] = scaled_bboxes[:, 3].clamp(0, H - 1)  # y2
+    def _scale_bboxes(self, bboxes, scaleW, scaleH, H, W):
+        scaled_bboxes = bboxes.clone()
 
-        return bboxes
+        # Clamp to ensure bounding boxes are within image dimensions
+        scaled_bboxes[..., 0] = (scaled_bboxes[..., 0] * scaleW).clamp(0, W - 1)  # x1
+        scaled_bboxes[..., 1] = (scaled_bboxes[..., 1] * scaleH).clamp(0, H - 1)  # y1
+        scaled_bboxes[..., 2] = (scaled_bboxes[..., 2] * scaleW).clamp(0, W - 1)  # x2
+        scaled_bboxes[..., 3] = (scaled_bboxes[..., 3] * scaleH).clamp(0, H - 1)  # y2
+
+        return scaled_bboxes
 
 
 
