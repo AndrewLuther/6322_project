@@ -13,9 +13,21 @@ class Util():
             examples.append(example)
         return examples
 
-    # TODO
     @staticmethod
-    def min_count_loss(density_map_label, density_map_prediction):
+    def min_count_loss(density_map, bboxes):
+        cropped_density_maps = Util.get_examples_from_bboxes(density_map, bboxes)
+        loss = 0
+        for crop in cropped_density_maps:
+            loss += np.max([0, 1 - torch.sum(crop)])
+        return loss
+            
+    #TODO
+    @staticmethod
+    def perturbation_loss():
         pass
 
+    #TODO
+    @staticmethod
+    def adaptation_loss():
+        pass
 
