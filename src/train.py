@@ -4,16 +4,21 @@ import torch.nn.functional as F
 from data import Dataset_Creator, display_sample, display_prediction
 from network import FamNet
 
+from class_var import DEVICE
+
+
 def train_FamNet(num_epochs=1, learning_rate=1e-5):
     """
     Train the FamNet model on the dataset.
     """
+    print(f"Training using {DEVICE}.")
+
     # Create the dataset and dataloader
     train_data = Dataset_Creator.get_training_dataset()
     train_loader = torch.utils.data.DataLoader(train_data, batch_size=1, shuffle=True)
 
     # Initialize the model
-    model = FamNet()
+    model = FamNet().to(DEVICE)
     model.train()  # Set the model to training mode
 
     # Loss function and optimizer
@@ -24,11 +29,10 @@ def train_FamNet(num_epochs=1, learning_rate=1e-5):
     for epoch in range(num_epochs):
         epoch_loss = 0.0
         for batch_idx, (train_images, train_dmaps, train_bboxes) in enumerate(train_loader):
-            
             # Prepare the data (move to device if using CUDA)
-            train_images = train_images.cuda() if torch.cuda.is_available() else train_images
-            train_dmaps = train_dmaps.cuda() if torch.cuda.is_available() else train_dmaps
-            train_bboxes = train_bboxes.cuda() if torch.cuda.is_available() else train_bboxes
+            train_images = train_images.to(DEVICE)
+            train_dmaps = train_dmaps.to(DEVICE)
+            train_bboxes = train_bboxes.to(DEVICE)
 
             train_dmaps = train_dmaps.unsqueeze(0) # add extra dimension
             optimizer.zero_grad()
@@ -49,8 +53,6 @@ def train_FamNet(num_epochs=1, learning_rate=1e-5):
                 print(f"Epoch [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(train_loader)}], Loss: {loss.item():.6f}")
                 display_prediction(train_images, train_dmaps, pred_dmaps)
 
-            if batch_idx == 200:
-                break
 
         # Print the average loss for the epoch
         avg_epoch_loss = epoch_loss / len(train_loader)

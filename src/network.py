@@ -4,6 +4,8 @@ import torch.nn.functional as F
 from torchvision.models import resnet50, ResNet50_Weights
 from torchvision.ops import roi_pool
 
+from class_var import DEVICE
+
 class DensityPredictionModule(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(DensityPredictionModule, self).__init__()
@@ -60,11 +62,14 @@ class ROIPool(nn.Module):
         self.output_size = output_size
         self.scales = scales
 
+        # # dummy parameter to get the model's device from (ref: https://stackoverflow.com/questions/58926054/how-to-get-the-device-type-of-a-pytorch-module-conveniently)
+        # self.dummy_param = nn.Parameter(torch.empty(0))
+
     def forward(self, feature_map, bboxes):
         # ref: https://pytorch.org/vision/main/generated/torchvision.ops.box_convert.html
         # ref: https://pytorch.org/vision/main/generated/torchvision.ops.roi_pool.html
 
-        batch_indices = torch.arange(len(bboxes)).unsqueeze(1)  # Shape (B, 1)
+        batch_indices = torch.arange(len(bboxes)).unsqueeze(1).to(DEVICE)  # Shape (B, 1)
 
         # Concatenate the indices to the first column of bboxes
         # this gives shape [B, 5] or [K, 5] in the docs, where K is number of elements
@@ -101,11 +106,12 @@ class FeatureExtractionModule(nn.Module):
         self.block4 = list(resnet.children())[6]  # Layer 3
 
     def forward(self, x):
-        x = self.block1(x)
-        x = self.block2(x)
-        f_map1 = self.block3(x)  # Feature maps from third block
-        f_map2 = self.block4(f_map1)  # Feature maps from fourth block
-        return f_map1, f_map2
+        with torch.no_grad():
+            x = self.block1(x)
+            x = self.block2(x)
+            f_map1 = self.block3(x)  # Feature maps from third block
+            f_map2 = self.block4(f_map1)  # Feature maps from fourth block
+            return f_map1, f_map2
 
 class FamNet(nn.Module):
     def __init__(self):
