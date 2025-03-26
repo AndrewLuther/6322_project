@@ -48,45 +48,27 @@ class FeatureCorrelationModule(nn.Module):
     def forward(self, image_feature, examplar_feature):
         # ref : https://pytorch.org/docs/stable/generated/torch.nn.functional.conv2d.html
         # padding = 3 preserves the size
-
-        # Was getting "inf" values in the correlation_map
-        # Going to normalize to avoid inf/nan from large values
-        examplar_feature = F.normalize(examplar_feature, p=2, dim=1)
-
         correlation_map = F.conv2d(image_feature, examplar_feature, stride=1, padding=3)
         return correlation_map
     
+
 class ROIPool(nn.Module):
-    def __init__(self, output_size=(7, 7), scales=[0.9, 1.0, 1.1]):
+    def __init__(self):
         super(ROIPool, self).__init__()
-        self.output_size = output_size
-        self.scales = scales
 
-        # # dummy parameter to get the model's device from (ref: https://stackoverflow.com/questions/58926054/how-to-get-the-device-type-of-a-pytorch-module-conveniently)
-        # self.dummy_param = nn.Parameter(torch.empty(0))
-
-    def forward(self, feature_map, bboxes):
+    def forward(self, feature_map, bboxes, scale):
         # ref: https://pytorch.org/vision/main/generated/torchvision.ops.box_convert.html
         # ref: https://pytorch.org/vision/main/generated/torchvision.ops.roi_pool.html
-
-        batch_indices = torch.arange(len(bboxes)).unsqueeze(1).to(DEVICE)  # Shape (B, 1)
-
-        # Concatenate the indices to the first column of bboxes
-        # this gives shape [B, 5] or [K, 5] in the docs, where K is number of elements
-        # This is required as read here : https://pytorch.org/vision/main/_modules/torchvision/ops/roi_pool.html#roi_pool
-        rois = torch.cat([batch_indices, bboxes], dim=1) 
-
-        pooled_outputs = []
-        for scale in self.scales:
-            pooled_output = roi_pool(
-                feature_map,
-                boxes=rois,
-                output_size=self.output_size,
-                spatial_scale=scale
-            )
-            pooled_outputs.append(pooled_output) 
+        bboxes = bboxes.unsqueeze(0)
+        rois = [bboxes[i] for i in range(bboxes.shape[0])]
+        pooled_output = roi_pool(
+            feature_map,
+            boxes=rois,
+            output_size=(7, 7),
+            spatial_scale=scale
+        )
         
-        return pooled_outputs
+        return pooled_output
 
 class FeatureExtractionModule(nn.Module):
     def __init__(self):
@@ -119,11 +101,11 @@ class FamNet(nn.Module):
         self.feature_extraction = FeatureExtractionModule()
         self.roi_pool = ROIPool()
         self.feature_correlation = FeatureCorrelationModule()
-        self.density_prediction = DensityPredictionModule(in_channels=6, out_channels=64)  # 6 from concatenating 3+3 maps
+        self.density_prediction = DensityPredictionModule(in_channels=6, out_channels=64)
 
     def forward(self, x, bboxes):
         bboxes = bboxes.squeeze(0)
-        # Extract features from both scales
+
         f_map1, f_map2 = self.feature_extraction(x)
         target_size = f_map1.shape[2:]
 
@@ -131,33 +113,33 @@ class FamNet(nn.Module):
         c_maps = []
 
         for f_map in f_maps:
-            scaleW = f_map.shape[2] / x.shape[2] # x scale
-            scaleH = f_map.shape[3] / x.shape[3] # y scale
-            scaled_bboxes = self._scale_bboxes(bboxes, scaleW, scaleH, f_map.shape[2], f_map.shape[3])
-            exemplar_fs = self.roi_pool(f_map, scaled_bboxes)
-
-            # for each of the scaled features (scales of 0.9, 1.0, 1.1)
+            max_dim = max(f_map.shape[2], f_map.shape[3])
+            f_map = F.interpolate(f_map, size=(max_dim, max_dim), mode='bilinear', align_corners=False)
+            spatial_scale = f_map.shape[2] / x.shape[2]
+            
+            # ROI Pooling
+            exemplar_fs = []
+            exemplar_f = self.roi_pool(f_map, bboxes, spatial_scale)
+            exemplar_fs.append(exemplar_f)
+            
+            # Loop through scale factors (0.9 and 1.1)
+            for scale in [0.9, 1.1]:
+                scaled_bboxes = bboxes.clone() * scale
+                scaled_bboxes[..., 0].clamp_(min=0)
+                scaled_bboxes[..., 1].clamp_(min=0)
+                scaled_bboxes[..., 2].clamp_(max=f_map.shape[3])
+                scaled_bboxes[..., 3].clamp_(max=f_map.shape[2])
+        
+                exemplar_f = self.roi_pool(f_map, scaled_bboxes, spatial_scale)
+                exemplar_fs.append(exemplar_f)
+                
             for exemplar_f in exemplar_fs:
                 c_map = self.feature_correlation(f_map, exemplar_f)
                 c_map = F.interpolate(c_map, size=target_size, mode='bilinear', align_corners=False)
                 c_maps.append(c_map)
         
-        # We want to concatenate the correlation maps such that
-        # we have 6 channels, 3 channels for each of the scales, and then for each of the
-        # feature maps from the third and fourth blocks  
-        c_maps = torch.cat(c_maps, dim=0).permute(1, 0, 2, 3) # shpae [B, 6, H, W]
+        c_maps = torch.cat(c_maps, dim=0).permute(1, 0, 2, 3)
         return self.density_prediction(c_maps)
-    
-    def _scale_bboxes(self, bboxes, scaleW, scaleH, H, W):
-        scaled_bboxes = bboxes.clone()
-
-        # Clamp to ensure bounding boxes are within image dimensions
-        scaled_bboxes[..., 0] = (scaled_bboxes[..., 0] * scaleW).clamp(0, W - 1)  # x1
-        scaled_bboxes[..., 1] = (scaled_bboxes[..., 1] * scaleH).clamp(0, H - 1)  # y1
-        scaled_bboxes[..., 2] = (scaled_bboxes[..., 2] * scaleW).clamp(0, W - 1)  # x2
-        scaled_bboxes[..., 3] = (scaled_bboxes[..., 3] * scaleH).clamp(0, H - 1)  # y2
-
-        return scaled_bboxes
 
 
 
