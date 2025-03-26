@@ -2,10 +2,22 @@ import torch
 from util import Util
 from data import Dataset_Creator
 from accuracy import Accuracy
+from test import test_FamNet
 
 # Getting the results from table 1
 
 class Experiment1():
+
+    @staticmethod
+    def get_FamNet_accuracies():
+        pred_counts = test_FamNet()
+        gt_counts = Util.get_ground_truth_counts(Dataset_Creator.get_val_dataset())
+
+        mae = Accuracy.get_MAE(gt_counts, pred_counts)
+        rmse = Accuracy.get_RMSE(gt_counts, pred_counts)
+        return mae, rmse
+
+
     @staticmethod
     def get_mean_predictor_accuracies(dataset):
         gt_counts = Util.get_ground_truth_counts(dataset)
@@ -23,6 +35,7 @@ class Experiment1():
         mae = Accuracy.get_MAE(gt_counts, median_counts)
         rmse = Accuracy.get_RMSE(gt_counts, median_counts)
         return mae, rmse
+    
 
 class Mean_Median_Predictor():
     @staticmethod
