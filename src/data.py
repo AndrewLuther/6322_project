@@ -137,7 +137,7 @@ def display_prediction(train_images, train_dmaps, pred_dmaps):
     axarr[2].imshow(pred_dmap, cmap="gray")
     axarr[2].set_title("Prediction Density Map")
 
-    plt.show()
+    plt.savefig("../predictions/test.png")
 
 if __name__ == "__main__":
     train_data = Dataset_Creator.get_training_dataset()

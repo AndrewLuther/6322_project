@@ -40,7 +40,7 @@ def train_FamNet(num_epochs=1, learning_rate=1e-5):
             train_dmaps = train_dmaps.unsqueeze(0) # add extra dimension
             optimizer.zero_grad()
 
-            pred_dmaps = torch.sigmoid(model(train_images, train_bboxes))  # Get predicted density maps
+            pred_dmaps = model(train_images, train_bboxes)  # Get predicted density maps
             # Ensure pred_dmaps has same shape as train_dmaps
             # Sometimes pred_dmaps is a few pixels off on the width
             if pred_dmaps.shape != train_dmaps.shape:
@@ -56,12 +56,13 @@ def train_FamNet(num_epochs=1, learning_rate=1e-5):
                 print(f"Epoch [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(train_loader)}], Loss: {loss.item():.6f}")
                 #display_prediction(train_images, train_dmaps, pred_dmaps)
 
-            if batch_idx == 20: break
+            if batch_idx == 500: 
+                break
 
         # Print the average loss for the epoch
         avg_epoch_loss = epoch_loss / len(train_loader)
         print(f"Epoch [{epoch+1}/{num_epochs}] Average Loss: {avg_epoch_loss:.6f}")
-        #display_prediction(train_images, train_dmaps, pred_dmaps)
+        display_prediction(train_images, train_dmaps, pred_dmaps)
 
     # Save the model to be used for testing
     # ref: https://www.w3schools.com/python/python_datetime.asp
