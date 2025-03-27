@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 import datetime
 
-from data import Dataset_Creator, display_sample, display_prediction
+from data import Dataset_Creator, display_sample, display_prediction, save_prediction
 from network import FamNet
 
 from class_var import DEVICE
@@ -62,7 +62,7 @@ def train_FamNet(num_epochs=1, learning_rate=1e-5):
         # Print the average loss for the epoch
         avg_epoch_loss = epoch_loss / len(train_loader)
         print(f"Epoch [{epoch+1}/{num_epochs}] Average Loss: {avg_epoch_loss:.6f}")
-        display_prediction(train_images, train_dmaps, pred_dmaps)
+        save_prediction(train_images, train_dmaps, pred_dmaps, "../predictions/test.png")
 
     # Save the model to be used for testing
     # ref: https://www.w3schools.com/python/python_datetime.asp

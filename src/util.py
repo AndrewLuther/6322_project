@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from class_var import DEVICE
 
 # This file is for any misc data processing functions needed for altering the data inputs/outputs
 
@@ -14,7 +15,7 @@ class Util():
         return examples
     
     @staticmethod
-    def get_ground_truth_counts(dataset):
+    def get_ground_truth_counts(dataset, limit=None):
         """
         Get the ground truth counts from the dataset, which are the number of objects in each
         image in the dataset
@@ -24,7 +25,9 @@ class Util():
         gt_counts = []
         for batch_idx, (images, dmaps, bboxes) in enumerate(dataset_loader):
             gt_counts.append(torch.round(torch.sum(dmaps)))
+            if limit != None:
+                if batch_idx == limit: break
 
-        gt_counts = torch.stack(gt_counts)
+        gt_counts = torch.stack(gt_counts).to(DEVICE)
 
         return gt_counts

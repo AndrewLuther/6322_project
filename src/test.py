@@ -7,9 +7,9 @@ from class_var import DEVICE
 from data import Dataset_Creator
 from loss import Loss
 
-MODEL_NAME = "Mar_26_19_29_27"
+MODEL_NAME = "Mar_27_16_02_37"
 
-def test_FamNet(learning_rate=10e-7):
+def test_FamNet(learning_rate=10e-7, adaptation=True, limit=None):
     model = FamNet().to(DEVICE)
 
     # TODO much of this is the same as the trianing loop, could probably pull some out into another function
@@ -34,34 +34,36 @@ def test_FamNet(learning_rate=10e-7):
 
         val_dmaps = val_dmaps.unsqueeze(0) # add extra dimension
 
-        # optimizer = optim.Adam(model.density_prediction.parameters(), lr=learning_rate)
+        if (adaptation):
+            optimizer = optim.Adam(model.density_prediction.parameters(), lr=learning_rate)
 
-        # print(f"Adapting Image {batch_idx}/{total_images}")
+            print(f"Adapting Image {batch_idx}/{total_images}")
 
-        # # Test time adaptation:
-        # for step in range(100):
+            # Test time adaptation:
+            for step in range(100):
 
-        #     pred_dmaps = model(val_images, val_bboxes)
+                pred_dmaps = model(val_images, val_bboxes)
 
-        #     # Ensure pred_dmaps has same shape as train_dmaps
-        #     # Sometimes pred_dmaps is a few pixels off on the width
-        #     if pred_dmaps.shape != val_dmaps.shape:
-        #         pred_dmaps = F.interpolate(pred_dmaps, size=val_dmaps.shape[2:], mode='bilinear', align_corners=False)
+                # Ensure pred_dmaps has same shape as train_dmaps
+                # Sometimes pred_dmaps is a few pixels off on the width
+                if pred_dmaps.shape != val_dmaps.shape:
+                    pred_dmaps = F.interpolate(pred_dmaps, size=val_dmaps.shape[2:], mode='bilinear', align_corners=False)
 
-        #     # TODO need to just put the density prediction module params in here
-        #     optimizer.zero_grad()
+                optimizer.zero_grad()
 
-        #     # compute adaptation loss
-        #     loss = Loss.adaptation_loss(pred_dmaps, val_bboxes[0])
-        #     loss.backward()
-        #     optimizer.step()
+                # compute adaptation loss
+                loss = Loss.adaptation_loss(pred_dmaps, val_bboxes[0])
+                loss.backward()
+                optimizer.step()
         
         with torch.no_grad():
             pred_dmaps = model(val_images, val_bboxes)
             pred_counts.append(torch.round(torch.sum(pred_dmaps)))
             print(f"Image{batch_idx} count: {torch.round(torch.sum(pred_dmaps))}")
 
-    pred_counts = torch.stack(pred_counts)
+        if limit != None and batch_idx == limit: break #TODO remove
+
+    pred_counts = torch.stack(pred_counts).to(DEVICE)
     return pred_counts
 
 

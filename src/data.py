@@ -119,7 +119,7 @@ def display_sample(train_images, train_dmaps, train_bboxes):
 
 def display_prediction(train_images, train_dmaps, pred_dmaps):
     """
-    Display a random sample, its density map, and an example object from the given dataset
+    Display a training image, it's ground truth d_map, and a predicted d_map
     """
 
     # first img/dmap from batch
@@ -137,7 +137,25 @@ def display_prediction(train_images, train_dmaps, pred_dmaps):
     axarr[2].imshow(pred_dmap, cmap="gray")
     axarr[2].set_title("Prediction Density Map")
 
-    plt.savefig("../predictions/test.png")
+    plt.show()
+
+def save_prediction(train_images, train_dmaps, pred_dmaps, filepath):
+    # first img/dmap from batch
+    img = train_images[0].squeeze().to(torch.int)
+    dmap = train_dmaps[0].squeeze().detach().cpu().numpy()
+    pred_dmap = pred_dmaps[0].squeeze().detach().cpu().numpy()
+
+    # ref: https://stackoverflow.com/questions/53623472/how-do-i-display-a-single-image-in-pytorch 
+    # ref: https://stackoverflow.com/questions/41793931/plotting-images-side-by-side-using-matplotlib
+    f, axarr = plt.subplots(1, 3, figsize=(12, 4))
+    axarr[0].imshow(img.permute(1, 2, 0).detach().cpu().numpy())
+    axarr[0].set_title("Original Image")
+    axarr[1].imshow(dmap, cmap="gray")
+    axarr[1].set_title("Density Map")
+    axarr[2].imshow(pred_dmap, cmap="gray")
+    axarr[2].set_title("Prediction Density Map")
+
+    plt.savefig(filepath)
 
 if __name__ == "__main__":
     train_data = Dataset_Creator.get_training_dataset()
