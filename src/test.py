@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 from network import FamNet
 from class_var import DEVICE
-from data import Dataset_Creator
+from data import Dataset_Creator, save_prediction
 from loss import Loss
 
 MODEL_NAME = "Mar_27_16_02_37"
@@ -58,8 +58,20 @@ def test_FamNet(learning_rate=10e-7, adaptation=True, limit=None):
         
         with torch.no_grad():
             pred_dmaps = model(val_images, val_bboxes)
-            pred_counts.append(torch.round(torch.sum(pred_dmaps)))
-            print(f"Image{batch_idx} count: {torch.round(torch.sum(pred_dmaps))}")
+            # Ensure pred_dmaps has same shape as train_dmaps
+            # Sometimes pred_dmaps is a few pixels off on the width
+            if pred_dmaps.shape != val_dmaps.shape:
+                pred_dmaps = F.interpolate(pred_dmaps, size=val_dmaps.shape[2:], mode='bilinear', align_corners=False)
+
+            pred_count = torch.round(torch.sum(pred_dmaps))
+            actual_count = torch.round(torch.sum(val_dmaps))
+            # if pred_count > 0:
+            #     pass
+            criterion = torch.nn.MSELoss()
+            loss = criterion(val_dmaps, pred_dmaps)
+            pred_counts.append(pred_count)
+            print(f"Image{batch_idx} pred_count: {pred_count} | actual_count: {actual_count} | loss: {loss}")
+            save_prediction(val_images, val_dmaps, pred_dmaps, f"../predictions/image{batch_idx}.png")
 
         if limit != None and batch_idx == limit: break #TODO remove
 

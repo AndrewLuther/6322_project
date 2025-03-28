@@ -9,8 +9,9 @@ class Util():
     def get_examples_from_bboxes(image, bboxes):
         examples = []
         for bbox in bboxes:
+            # tensor is [channels, height, width] | bbox is [x1,y1,x2,y2]
             # add 1 because slice operators don't include larger index
-            example = image[:, int(bbox[0]):int(bbox[2])+1, int(bbox[1]):int(bbox[3])+1]
+            example = image[:, int(bbox[1]):int(bbox[3])+1, int(bbox[0]):int(bbox[2])+1]
             examples.append(example)
         return examples
     

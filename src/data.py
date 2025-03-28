@@ -59,8 +59,8 @@ class FSC147_Dataset(torch.utils.data.Dataset):
 
         for bbox in coordinates:
             # only need the top left and bottom right points
-            x1, y1 = int(bbox[0][1]), int(bbox[0][0])
-            x2, y2 = int(bbox[2][1]), int(bbox[2][0])
+            x1, y1 = int(bbox[0][0]), int(bbox[0][1]) # TODO THESE WERE SWAPPED (0s and 1s)
+            x2, y2 = int(bbox[2][0]), int(bbox[2][1])
             boxes.append([x1, y1, x2, y2])
 
         return torch.tensor(boxes, dtype=torch.float32)
@@ -115,7 +115,8 @@ def display_sample(train_images, train_dmaps, train_bboxes):
     axarr[2].imshow(example.permute(1, 2, 0))
     axarr[2].set_title("Exemplar Image")
 
-    plt.show()
+    #plt.show()
+    plt.savefig("display/out.png")
 
 def display_prediction(train_images, train_dmaps, pred_dmaps):
     """
