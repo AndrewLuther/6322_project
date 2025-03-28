@@ -97,11 +97,10 @@ class FamNet(nn.Module):
             for f_map in f_maps:
                 spatial_scale = f_map.shape[2] / x.shape[2]
                 
-                max_width = (bboxes[:, 2] -  bboxes[:, 0]).max().item()
-                max_height = (bboxes[:, 3] -  bboxes[:, 1]).max().item()
-                max_width = min(max_width, f_map.shape[3]) 
-                max_height = min(max_height, f_map.shape[2])
-                output_size = (int(max_height), int(max_width))
+                scaled_bboxes = bboxes * spatial_scale
+                max_width = (scaled_bboxes[:, 2] -  scaled_bboxes[:, 0]).max().item()
+                max_height = (scaled_bboxes[:, 3] -  scaled_bboxes[:, 1]).max().item()         
+                output_size = (max(int(max_height), 1), max(int(max_width), 1))
                 
                 # ROI Pooling
                 exemplar_fs = []
@@ -121,6 +120,7 @@ class FamNet(nn.Module):
                     c_map = F.interpolate(c_map, size=target_size, mode='bilinear', align_corners=False)
                     c_maps.append(c_map)
 
-        c_maps = torch.cat(c_maps, dim=0).permute(1, 0, 2, 3)
+        c_maps = torch.cat(c_maps, dim=0)
+        c_maps = c_maps.permute(1, 0, 2, 3)
         c_maps.requires_grad = True
         return self.density_prediction(c_maps)

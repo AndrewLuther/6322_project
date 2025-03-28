@@ -3,3 +3,5 @@ data/FSC147_384_V2
 .vscode/
 src/__pycache__/
 old/
+predictions/
+saved_models/

@@ -18,7 +18,7 @@ def train_FamNet(num_epochs=1, learning_rate=1e-5):
 
     # Create the dataset and dataloader
     train_data = Dataset_Creator.get_training_dataset()
-    train_loader = torch.utils.data.DataLoader(train_data, batch_size=1, shuffle=True) # TODO CHANGE BACK TO TRUE
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=1, shuffle=False) # TODO change back
 
     # Initialize the model
     model = FamNet().to(DEVICE)
@@ -55,15 +55,15 @@ def train_FamNet(num_epochs=1, learning_rate=1e-5):
             optimizer.step()
 
             if batch_idx % 10 == 0:  # Print loss every 10 batches
-                print(f"Epoch [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(train_loader)}], Loss: {loss.item():.9f}")
+                print(f"Epoch [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(train_loader)}], Loss: {loss.item():.12f}")
                 #display_prediction(train_images, train_dmaps, pred_dmaps)
 
-            if batch_idx == 100: #TODO change back
+            if batch_idx == 100:
                 break
 
         # Print the average loss for the epoch
         avg_epoch_loss = epoch_loss / len(train_loader)
-        print(f"Epoch [{epoch+1}/{num_epochs}] Average Loss: {avg_epoch_loss:.9f}")
+        print(f"Epoch [{epoch+1}/{num_epochs}] Average Loss: {avg_epoch_loss:.12f}")
         save_prediction(train_images, train_dmaps, pred_dmaps, "../predictions/test.png")
 
     # Save the model to be used for testing

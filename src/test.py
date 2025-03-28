@@ -7,7 +7,7 @@ from class_var import DEVICE
 from data import Dataset_Creator, save_prediction
 from loss import Loss
 
-MODEL_NAME = "Mar_27_16_02_37"
+MODEL_NAME = "Mar_28_11_11_17"
 
 def test_FamNet(learning_rate=10e-7, adaptation=True, limit=None):
     model = FamNet().to(DEVICE)
@@ -17,7 +17,7 @@ def test_FamNet(learning_rate=10e-7, adaptation=True, limit=None):
 
     # Create the dataset and dataloader
     val_data = Dataset_Creator.get_val_dataset()
-    val_loader = torch.utils.data.DataLoader(val_data, batch_size=1, shuffle=True)
+    val_loader = torch.utils.data.DataLoader(val_data, batch_size=1, shuffle=False)
 
     total_images = len(val_data)
 
@@ -65,8 +65,6 @@ def test_FamNet(learning_rate=10e-7, adaptation=True, limit=None):
 
             pred_count = torch.round(torch.sum(pred_dmaps))
             actual_count = torch.round(torch.sum(val_dmaps))
-            # if pred_count > 0:
-            #     pass
             criterion = torch.nn.MSELoss()
             loss = criterion(val_dmaps, pred_dmaps)
             pred_counts.append(pred_count)
