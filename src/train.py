@@ -18,7 +18,8 @@ def train_FamNet(num_epochs=1, learning_rate=1e-5):
 
     # Create the dataset and dataloader
     train_data = Dataset_Creator.get_training_dataset()
-    train_loader = torch.utils.data.DataLoader(train_data, batch_size=1, shuffle=False) # TODO change back
+    #train_data = torch.utils.data.Subset(train_data, [0]) # train on one sample
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=1, shuffle=True) # TODO change back
 
     # Initialize the model
     model = FamNet().to(DEVICE)
@@ -26,7 +27,7 @@ def train_FamNet(num_epochs=1, learning_rate=1e-5):
 
     # Loss function and optimizer
     criterion = torch.nn.MSELoss()  # Mean Squared Error Loss
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.density_prediction.parameters(), lr=learning_rate)
 
     # Training loop
     for epoch in range(num_epochs):
@@ -58,13 +59,15 @@ def train_FamNet(num_epochs=1, learning_rate=1e-5):
                 print(f"Epoch [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(train_loader)}], Loss: {loss.item():.12f}")
                 #display_prediction(train_images, train_dmaps, pred_dmaps)
 
-            if batch_idx == 100:
+            if batch_idx == 1000:
                 break
 
         # Print the average loss for the epoch
         avg_epoch_loss = epoch_loss / len(train_loader)
         print(f"Epoch [{epoch+1}/{num_epochs}] Average Loss: {avg_epoch_loss:.12f}")
         save_prediction(train_images, train_dmaps, pred_dmaps, "../predictions/test.png")
+        # if epoch % (num_epochs-1) == 0:
+        #     save_prediction(train_images, train_dmaps, pred_dmaps, f"../predictions/train{epoch}.png")
 
     # Save the model to be used for testing
     # ref: https://www.w3schools.com/python/python_datetime.asp

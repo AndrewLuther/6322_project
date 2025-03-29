@@ -13,8 +13,8 @@ gc.collect()
 class Experiment1():
 
     @staticmethod
-    def get_FamNet_accuracies(limit=None):
-        pred_counts = test_FamNet(adaptation=False, limit=limit)
+    def get_FamNet_accuracies(adaptation=False, limit=None):
+        pred_counts = test_FamNet(adaptation=adaptation, limit=limit)
         gt_counts = Util.get_ground_truth_counts(Dataset_Creator.get_val_dataset(), limit=limit)
 
         mae = Accuracy.get_MAE(gt_counts, pred_counts)
@@ -107,7 +107,7 @@ if __name__ == "__main__":
     val_dataset = Dataset_Creator.get_val_dataset()
 
     #print(Experiment1.get_mean_predictor_accuracies(test_dataset))
-    print(Experiment1.get_FamNet_accuracies(10))
+    print(Experiment1.get_FamNet_accuracies(False, 3))
 
 
 

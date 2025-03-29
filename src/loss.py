@@ -3,6 +3,7 @@ import numpy as np
 import skimage
 
 from util import Util
+from data import save_image
 from class_var import DEVICE
 
 # Loss calculations used for test-time adaptation (*** Only used at test time, not during training)
@@ -23,10 +24,14 @@ class Loss():
         cropped_density_maps = Util.get_examples_from_bboxes(density_map, bboxes)
         loss = torch.tensor([0], dtype=float).to(DEVICE)
         for crop in cropped_density_maps:
-            crop = crop[0] 
-            dimensions = crop.shape[1:3]
-            std_dev = dimensions[0]/4 # quarter of window size?
-            gaussian_window = torch.from_numpy(skimage.filters.window(('gaussian', std_dev), dimensions)).to(DEVICE)
+            crop = crop[0]
+            dimensions = crop.shape
+            std_dev = crop.shape[0]/4 # quarter of window size?
+            gaussian = skimage.filters.window(('gaussian', std_dev), dimensions)
+            gaussian = gaussian / np.sum(gaussian) # normalize
+            gaussian_window = torch.from_numpy(gaussian).to(DEVICE)
+
+            #save_image(gaussian_window, "display/gaussian.png", tensor2=crop) # can use this to display the gaussian filter and crop
             loss += torch.sum((crop - gaussian_window)**2)
         return loss
 

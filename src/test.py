@@ -7,7 +7,7 @@ from class_var import DEVICE
 from data import Dataset_Creator, save_prediction
 from loss import Loss
 
-MODEL_NAME = "Mar_28_11_11_17"
+MODEL_NAME = "Mar_29_18_20_30"
 
 def test_FamNet(learning_rate=10e-7, adaptation=True, limit=None):
     model = FamNet().to(DEVICE)
@@ -17,7 +17,7 @@ def test_FamNet(learning_rate=10e-7, adaptation=True, limit=None):
 
     # Create the dataset and dataloader
     val_data = Dataset_Creator.get_val_dataset()
-    val_loader = torch.utils.data.DataLoader(val_data, batch_size=1, shuffle=False)
+    val_loader = torch.utils.data.DataLoader(val_data, batch_size=1, shuffle=False) # TODO Shuffle off while testing
 
     total_images = len(val_data)
 
@@ -52,7 +52,7 @@ def test_FamNet(learning_rate=10e-7, adaptation=True, limit=None):
                 optimizer.zero_grad()
 
                 # compute adaptation loss
-                loss = Loss.adaptation_loss(pred_dmaps, val_bboxes[0])
+                loss = Loss.adaptation_loss(pred_dmaps[0], val_bboxes[0])
                 loss.backward()
                 optimizer.step()
         
@@ -71,7 +71,7 @@ def test_FamNet(learning_rate=10e-7, adaptation=True, limit=None):
             print(f"Image{batch_idx} pred_count: {pred_count} | actual_count: {actual_count} | loss: {loss}")
             save_prediction(val_images, val_dmaps, pred_dmaps, f"../predictions/image{batch_idx}.png")
 
-        if limit != None and batch_idx == limit: break #TODO remove
+        if limit != None and batch_idx == limit: break
 
     pred_counts = torch.stack(pred_counts).to(DEVICE)
     return pred_counts

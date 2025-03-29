@@ -84,7 +84,7 @@ class FamNet(nn.Module):
         self.feature_extraction = FeatureExtractionModule()
         self.roi_pool = ROIPool()
         self.feature_correlation = FeatureCorrelationModule()
-        self.density_prediction = DensityPredictionModule(in_channels=6)
+        self.density_prediction = DensityPredictionModule(in_channels=3)
 
     def forward(self, x, bboxes):
         with torch.no_grad():
@@ -118,9 +118,13 @@ class FamNet(nn.Module):
                 for exemplar_f in exemplar_fs:
                     c_map = self.feature_correlation(f_map, exemplar_f)
                     c_map = F.interpolate(c_map, size=target_size, mode='bilinear', align_corners=False)
+                    #c_map = c_map.permute(1,0,2,3)
                     c_maps.append(c_map)
 
+        
+
+        #c_maps = torch.cat(c_maps, dim=0)
         c_maps = torch.cat(c_maps, dim=0)
-        c_maps = c_maps.permute(1, 0, 2, 3)
+        #c_maps = c_maps.permute(1, 0, 2, 3)
         c_maps.requires_grad = True
         return self.density_prediction(c_maps)

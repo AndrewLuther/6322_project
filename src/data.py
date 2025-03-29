@@ -58,10 +58,14 @@ class FSC147_Dataset(torch.utils.data.Dataset):
         boxes = []
 
         for bbox in coordinates:
+            
             # only need the top left and bottom right points
-            x1, y1 = int(bbox[0][0]), int(bbox[0][1]) # TODO THESE WERE SWAPPED (0s and 1s)
+            x1, y1 = int(bbox[0][0]), int(bbox[0][1]) 
             x2, y2 = int(bbox[2][0]), int(bbox[2][1])
             boxes.append([x1, y1, x2, y2])
+        
+        if len(boxes) > 3:
+            boxes = boxes[0:3]
 
         return torch.tensor(boxes, dtype=torch.float32)
 
@@ -155,6 +159,25 @@ def save_prediction(train_images, train_dmaps, pred_dmaps, filepath):
     axarr[1].set_title("Density Map")
     axarr[2].imshow(pred_dmap, cmap="gray")
     axarr[2].set_title("Prediction Density Map")
+
+    plt.savefig(filepath)
+
+def save_image(tensor, filepath, three_dim=False, tensor2=None):
+    tensor = tensor.squeeze().detach().cpu().numpy() # squeeze removes any dimensions with 1
+
+    # ref: https://stackoverflow.com/questions/53623472/how-do-i-display-a-single-image-in-pytorch 
+    # ref: https://stackoverflow.com/questions/41793931/plotting-images-side-by-side-using-matplotlib
+    f, axarr = plt.subplots(1, 3, figsize=(12, 4))
+
+    if three_dim:
+        axarr[0].imshow(tensor.permute(1,2,0))
+        axarr[0].set_title("Image")
+    else:
+        axarr[0].imshow(tensor, cmap="gray")
+
+    if tensor2 != None:
+            tensor2 = tensor2.squeeze().detach().cpu().numpy()
+            axarr[1].imshow(tensor2, cmap="gray")
 
     plt.savefig(filepath)
 
