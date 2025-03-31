@@ -7,7 +7,7 @@ from class_var import DEVICE
 from data import Dataset_Creator, save_prediction
 from loss import Loss
 
-MODEL_NAME = "Mar_29_18_20_30"
+MODEL_NAME = "Mar_31_13_57_38"
 
 def test_FamNet(learning_rate=10e-7, adaptation=True, limit=None):
     model = FamNet().to(DEVICE)

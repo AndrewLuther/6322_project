@@ -4,9 +4,7 @@ from data import Dataset_Creator
 from accuracy import Accuracy
 from test import test_FamNet
 
-import gc
-
-gc.collect()
+from class_var import DEVICE
 
 # Getting the results from table 1
 
@@ -17,7 +15,7 @@ class Experiment1():
         pred_counts = test_FamNet(adaptation=adaptation, limit=limit)
         gt_counts = Util.get_ground_truth_counts(Dataset_Creator.get_val_dataset(), limit=limit)
 
-        mae = Accuracy.get_MAE(gt_counts, pred_counts)
+        mae = Accuracy.get_MAE(gt_counts, pred_counts) # Note, mae and rmse will only be accurate when there is no limit (divides by dataset length)
         rmse = Accuracy.get_RMSE(gt_counts, pred_counts)
         return mae, rmse
 
@@ -69,7 +67,7 @@ class Mean_Median_Predictor():
         Model should preform better than this.
         """
         mean = Mean_Median_Predictor._get_mean_count_for_dataset()
-        mean_predictions = mean.repeat(len(dataset))
+        mean_predictions = mean.repeat(len(dataset)).to(DEVICE)
         return mean_predictions
     
 
@@ -79,7 +77,7 @@ class Mean_Median_Predictor():
         Returns the median number of objects in the image across the training dataset (unless otherwise specified).
         Used for the median predictor.
         """
-        # by default, we want to use the mean of the training dataset, baseline is based on training dataset's mean count
+        # by default, we want to use the mean of the training dataset, baseline is based on training dataset's median count
         if dataset == None:
             dataset = Dataset_Creator.get_training_dataset()
 
