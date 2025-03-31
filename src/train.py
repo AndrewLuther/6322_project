@@ -6,6 +6,7 @@ import datetime
 
 from data import Dataset_Creator, display_sample, display_prediction, save_prediction
 from network import FamNet
+from logger import Logger
 
 from class_var import DEVICE
 
@@ -85,6 +86,14 @@ def train_FamNet_single_sample(num_epochs=20, learning_rate=1e-5):
     model.train()  # Set the model to training mode
     model.feature_extraction.eval() 
 
+    # Debugging/logging stuff
+    logger = Logger()
+
+    for name, module in model.density_prediction.named_modules():
+        if isinstance(module, torch.nn.Conv2d):  
+            module.register_forward_hook(logger.forward_hook)
+            module.register_full_backward_hook(logger.backward_hook)
+
     # Loss function and optimizer
     criterion = torch.nn.MSELoss().to(DEVICE)  # Mean Squared Error Loss
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
@@ -107,12 +116,19 @@ def train_FamNet_single_sample(num_epochs=20, learning_rate=1e-5):
 
             # Compute the loss (MSE between predicted and ground truth density maps)
             loss = criterion(pred_dmaps, train_dmaps)
+
+            logger.add_scalar('loss', loss)
+
             loss.backward()
             optimizer.step()
 
             print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.12f}")
             save_prediction(train_images, train_dmaps, pred_dmaps, "../predictions/test.png")
 
+            logger.increment()
+
+    logger.finish()
+
 if __name__ == "__main__":
-    #train_FamNet_single_sample(learning_rate=1e-5 ,num_epochs=50)
-    train_FamNet(batch_limit=500)
+    train_FamNet_single_sample(num_epochs=200)
+    #train_FamNet(batch_limit=50)

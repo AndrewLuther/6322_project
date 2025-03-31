@@ -5,3 +5,4 @@ src/__pycache__/
 old/
 predictions/
 saved_models/
+src/runs

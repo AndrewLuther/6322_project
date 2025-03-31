@@ -62,12 +62,18 @@ class FeatureExtractionModule(nn.Module):
     def __init__(self):
         super(FeatureExtractionModule, self).__init__()
         resnet = resnet50(weights=ResNet50_Weights.DEFAULT)
+        resnet.train(False)
         self.block1 = nn.Sequential(*list(resnet.children())[:4])  # conv1 + bn1 + relu + maxpool
         self.block2 = list(resnet.children())[4]  # Layer 1
         self.block3 = list(resnet.children())[5]  # Layer 2
         self.block4 = list(resnet.children())[6]  # Layer 3
 
     def forward(self, x):
+        self.block1.train(False)
+        self.block2.train(False)
+        self.block3.train(False)
+        self.block4.train(False)
+
         x = self.block1(x)
         x = self.block2(x)
         f_map1 = self.block3(x)
