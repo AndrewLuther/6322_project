@@ -5,7 +5,8 @@ import torch.nn.functional as F
 import datetime
 
 from data import Dataset_Creator, display_sample, display_prediction, save_prediction
-from network import FamNet
+from network2 import FamNet as F2 # TODO CHANGE BACK
+from network import FamNet as FamNet
 from logger import Logger
 
 from class_var import DEVICE
@@ -123,12 +124,52 @@ def train_FamNet_single_sample(num_epochs=20, learning_rate=1e-5):
             optimizer.step()
 
             print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.12f}")
-            save_prediction(train_images, train_dmaps, pred_dmaps, "../predictions/test.png")
+
+            if(epoch == num_epochs-1):
+                save_prediction(train_images, train_dmaps, pred_dmaps, "../predictions/test.png")
 
             logger.increment()
 
     logger.finish()
 
+
+def train(num_epochs=20, learning_rate=1e-5):
+    # Create the dataset and dataloader
+    train_data = Dataset_Creator.get_training_dataset()
+    single_sample = torch.utils.data.Subset(train_data, [1])  # Use only the first sample
+    train_loader = torch.utils.data.DataLoader(single_sample, batch_size=1, shuffle=False)
+
+    model = F2().to(DEVICE)
+    model.eval()
+
+    # Loss function and optimizer
+    criterion = torch.nn.MSELoss().to(DEVICE)  # Mean Squared Error Loss
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
+    for epoch in range(num_epochs):
+        for batch_idx, (train_images, train_dmaps, train_bboxes) in enumerate(train_loader):
+            # Prepare the data (move to device if using CUDA)
+            train_images = train_images.to(DEVICE)
+            train_dmaps = train_dmaps.to(DEVICE).unsqueeze(0) 
+            train_bboxes = train_bboxes.to(DEVICE)
+
+            #optimizer.zero_grad()
+            pred_dmaps = model(train_images, train_bboxes)  # Get predicted density maps
+
+
+
+            # Compute the loss (MSE between predicted and ground truth density maps)
+            loss = criterion(pred_dmaps, train_dmaps)
+
+            loss.backward()
+            optimizer.step()
+
+            print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.12f}")
+            if(epoch == num_epochs-1):
+                # Save the final prediction
+                save_prediction(train_images, train_dmaps, pred_dmaps, "../predictions/test.png")
+
 if __name__ == "__main__":
-    train_FamNet_single_sample(num_epochs=200)
+    #train_FamNet_single_sample(num_epochs=50)
     #train_FamNet(batch_limit=50)
+    train(num_epochs=50)

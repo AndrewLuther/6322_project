@@ -163,6 +163,9 @@ def save_prediction(train_images, train_dmaps, pred_dmaps, filepath):
     plt.savefig(filepath)
 
 def save_image(tensor, filepath, three_dim=False, tensor2=None):
+    if three_dim:
+        tensor = tensor/(torch.max(tensor))
+        tensor = tensor.permute(1,2,0)
     tensor = tensor.squeeze().detach().cpu().numpy() # squeeze removes any dimensions with 1
 
     # ref: https://stackoverflow.com/questions/53623472/how-do-i-display-a-single-image-in-pytorch 
@@ -170,7 +173,7 @@ def save_image(tensor, filepath, three_dim=False, tensor2=None):
     f, axarr = plt.subplots(1, 3, figsize=(12, 4))
 
     if three_dim:
-        axarr[0].imshow(tensor.permute(1,2,0))
+        axarr[0].imshow(tensor)
         axarr[0].set_title("Image")
     else:
         axarr[0].imshow(tensor, cmap="gray")

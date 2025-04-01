@@ -61,12 +61,12 @@ class ROIPool(nn.Module):
 class FeatureExtractionModule(nn.Module):
     def __init__(self):
         super(FeatureExtractionModule, self).__init__()
-        resnet = resnet50(weights=ResNet50_Weights.DEFAULT)
-        resnet.train(False)
-        self.block1 = nn.Sequential(*list(resnet.children())[:4])  # conv1 + bn1 + relu + maxpool
-        self.block2 = list(resnet.children())[4]  # Layer 1
-        self.block3 = list(resnet.children())[5]  # Layer 2
-        self.block4 = list(resnet.children())[6]  # Layer 3
+        self.weights = ResNet50_Weights.IMAGENET1K_V1
+        self.resnet = resnet50(weights=self.weights)
+        self.block1 = nn.Sequential(*list(self.resnet.children())[:4])  # conv1 + bn1 + relu + maxpool
+        self.block2 = list(self.resnet.children())[4]  # Layer 1
+        self.block3 = list(self.resnet.children())[5]  # Layer 2
+        self.block4 = list(self.resnet.children())[6]  # Layer 3
 
     def forward(self, x):
         self.block1.train(False)
@@ -74,10 +74,17 @@ class FeatureExtractionModule(nn.Module):
         self.block3.train(False)
         self.block4.train(False)
 
+        # preprocess = self.weights.transforms()
+        # x = preprocess(x)
+
         x = self.block1(x)
         x = self.block2(x)
         f_map1 = self.block3(x)
         f_map2 = self.block4(f_map1)
+
+        f_map1 = torch.nn.functional.normalize(f_map1)
+        f_map2 = torch.nn.functional.normalize(f_map2)
+
         return f_map1, f_map2
 
 class FamNet(nn.Module):
