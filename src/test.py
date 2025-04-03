@@ -2,9 +2,10 @@ import torch
 import torch.optim as optim
 import torch.nn.functional as F
 
+from debug import save_prediction
 from network import FamNet
-from class_var import DEVICE
-from data import Dataset_Creator, save_prediction
+from device import DEVICE
+from data import Dataset_Creator
 from loss import Loss
 
 MODEL_NAME = "Mar_31_13_57_38"

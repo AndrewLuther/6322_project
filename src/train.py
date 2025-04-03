@@ -2,18 +2,19 @@ import torch
 import torch.optim as optim
 import torch.nn.functional as F
 
-import datetime
+import argparse
 
-from data import Dataset_Creator, display_sample, display_prediction, save_prediction
-from network2 import FamNet as F2 # TODO CHANGE BACK
+from data import Dataset_Creator
+from debug import display_prediction, display_sample, save_prediction
 from network import FamNet as FamNet
 from logger import Logger
+from util import Util
 
-from class_var import DEVICE
+from device import DEVICE
 
 def train_FamNet(num_epochs=1, batch_limit=None, learning_rate=1e-5):
     """
-    Train the FamNet model on the dataset.
+    Train the FamNet model on the training dataset.
     """
     # Create the dataset and dataloader
     train_data = Dataset_Creator.get_training_dataset()
@@ -53,9 +54,13 @@ def train_FamNet(num_epochs=1, batch_limit=None, learning_rate=1e-5):
             optimizer.step()
 
             if batch_idx % 10 == 0:  # Print loss every 10 batches
-                print(f"Epoch [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(train_loader)}], Loss: {loss.item():.12f}")
+                if batch_limit:
+                    num_batches = batch_limit
+                else:
+                    num_batches = len(train_loader)
+                print(f"Epoch [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{num_batches}], Loss: {loss.item():.12f}")
 
-            if batch_limit != None and batch_idx == batch_limit:
+            if batch_limit != None and batch_idx == (batch_limit-1):
                 break
 
         # Print the average loss for the epoch
@@ -64,14 +69,9 @@ def train_FamNet(num_epochs=1, batch_limit=None, learning_rate=1e-5):
 
         # Save the last prediction
         save_prediction(train_images, train_dmaps, pred_dmaps, "../predictions/test.png")
-        save_model(model)
+        Util.save_model(model)
 
-def save_model(model):
-    # Save the model to be used for testing
-    # ref: https://www.w3schools.com/python/python_datetime.asp
-    time = datetime.datetime.now()
-    time = time.strftime("%b_%d_%H_%M_%S")
-    torch.save(model.state_dict(), f"../saved_models/{time}.pth")
+
 
 def train_FamNet_single_sample(num_epochs=20, learning_rate=1e-5):
     """
@@ -126,50 +126,35 @@ def train_FamNet_single_sample(num_epochs=20, learning_rate=1e-5):
             print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.12f}")
 
             if(epoch == num_epochs-1):
-                save_prediction(train_images, train_dmaps, pred_dmaps, "../predictions/test.png")
+                save_prediction(train_images, train_dmaps, pred_dmaps, "../predictions/final_prediction.png")
 
             logger.increment()
 
     logger.finish()
 
+def train_with_args():
+    """
+    Trains the model using commandline arguments provided by the user
+    """
+    # ref: https://stackoverflow.com/questions/16712795/pass-arguments-from-cmd-to-python-script 
+    # ref: https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
+    # ref: https://docs.python.org/3/howto/argparse.html 
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--single', action=argparse.BooleanOptionalAction, help="whether or not to train the model on one sample")
+    parser.add_argument('-e', '--num_epochs', action="store", dest="num_epochs", default=None, help="the number of epochs to run the training for", type=int)
+    parser.add_argument('-b', '--batch_limit', action="store", dest="batch_limit", default=None, help="batch cutoff to stop the training early", type=int)
+    args = parser.parse_args()
 
-def train(num_epochs=20, learning_rate=1e-5):
-    # Create the dataset and dataloader
-    train_data = Dataset_Creator.get_training_dataset()
-    single_sample = torch.utils.data.Subset(train_data, [1])  # Use only the first sample
-    train_loader = torch.utils.data.DataLoader(single_sample, batch_size=1, shuffle=False)
+    if args.single:
+        if args.num_epochs == None: epochs = 50
+        else: epochs = args.num_epochs
+        train_FamNet_single_sample(num_epochs=epochs)
+    else:
+        if args.num_epochs == None: epochs = 1
+        else: epochs = args.num_epochs
+        train_FamNet(num_epochs=epochs, batch_limit=args.batch_limit)
 
-    model = F2().to(DEVICE)
-    model.eval()
-
-    # Loss function and optimizer
-    criterion = torch.nn.MSELoss().to(DEVICE)  # Mean Squared Error Loss
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-
-    for epoch in range(num_epochs):
-        for batch_idx, (train_images, train_dmaps, train_bboxes) in enumerate(train_loader):
-            # Prepare the data (move to device if using CUDA)
-            train_images = train_images.to(DEVICE)
-            train_dmaps = train_dmaps.to(DEVICE).unsqueeze(0) 
-            train_bboxes = train_bboxes.to(DEVICE)
-
-            #optimizer.zero_grad()
-            pred_dmaps = model(train_images, train_bboxes)  # Get predicted density maps
-
-
-
-            # Compute the loss (MSE between predicted and ground truth density maps)
-            loss = criterion(pred_dmaps, train_dmaps)
-
-            loss.backward()
-            optimizer.step()
-
-            print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.12f}")
-            if(epoch == num_epochs-1):
-                # Save the final prediction
-                save_prediction(train_images, train_dmaps, pred_dmaps, "../predictions/test.png")
 
 if __name__ == "__main__":
-    #train_FamNet_single_sample(num_epochs=50)
-    #train_FamNet(batch_limit=50)
-    train(num_epochs=50)
+    train_with_args()
+    #train_FamNet(batch_limit=10)

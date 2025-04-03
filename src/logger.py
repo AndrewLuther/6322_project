@@ -3,6 +3,9 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 
 class Logger():
+    """
+    Tensorboard logger used during debugging.
+    """
     def __init__(self):
         self.writer = SummaryWriter()
         self.iteration = 0

@@ -1,6 +1,9 @@
 import numpy as np
 import torch
-from class_var import DEVICE
+
+import datetime
+
+from device import DEVICE
 
 # This file is for any misc data processing functions needed for altering the data inputs/outputs
 
@@ -32,3 +35,14 @@ class Util():
         gt_counts = torch.stack(gt_counts).to(DEVICE)
 
         return gt_counts
+    
+    @staticmethod
+    def save_model(model):
+        """
+        Saves the trianed model to the saved_models folder so it can be used for evaluation.
+        """
+        # 
+        # ref: https://www.w3schools.com/python/python_datetime.asp
+        time = datetime.datetime.now()
+        time = time.strftime("%b_%d_%H_%M_%S")
+        torch.save(model.state_dict(), f"../saved_models/{time}.pth")

@@ -4,7 +4,7 @@ from data import Dataset_Creator
 from util import Util
 from loss import Loss
 
-from class_var import DEVICE
+from device import DEVICE
 
 
 # for testing out functionality from other files

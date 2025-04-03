@@ -3,8 +3,8 @@ import numpy as np
 import skimage
 
 from util import Util
-from data import save_image
-from class_var import DEVICE
+from debug import save_image
+from device import DEVICE
 
 # Loss calculations used for test-time adaptation (*** Only used at test time, not during training)
 class Loss():

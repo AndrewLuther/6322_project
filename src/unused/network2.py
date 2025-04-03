@@ -7,7 +7,10 @@ from torchvision.ops import roi_pool
 
 import math
 
-from data import save_image
+from debug import save_image
+
+## Code Andrew wrote when debugging, by going through everything in our model architecture and testing one
+## line at a time. This code is not used.
 
 class FamNet(nn.Module):
     def __init__(self):

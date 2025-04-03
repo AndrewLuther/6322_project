@@ -4,11 +4,11 @@ from data import Dataset_Creator
 from accuracy import Accuracy
 from test import test_FamNet
 
-from class_var import DEVICE
+from device import DEVICE
 
 # Getting the results from table 1
 
-class Experiment1():
+class Eval():
 
     @staticmethod
     def get_FamNet_accuracies(adaptation=False, limit=None):
@@ -100,12 +100,11 @@ class Mean_Median_Predictor():
         return median_predictions
 
 if __name__ == "__main__":
-    torch.cuda.empty_cache()
     test_dataset = Dataset_Creator.get_test_dataset()
     val_dataset = Dataset_Creator.get_val_dataset()
 
     #print(Experiment1.get_mean_predictor_accuracies(test_dataset))
-    print(Experiment1.get_FamNet_accuracies(False, 3))
+    print(Eval.get_FamNet_accuracies(False, 3))
 
 
 
