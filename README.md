@@ -36,7 +36,7 @@ Unzip this folder, and place the unzipped folder (called FSC147_384_V2) directly
 To train the model on the entire dataset, run the following commands:
 ```
 cd src
-python train.py -e=<number of epochs> -b=<number of batches>
+python train.py -e=<number of epochs> -b=<number of batches> -lr=<learning rate>
 ```
 
 Training on the entire dataset will automatically save a model to the "saved_models" folder with the name \<Current DateTime\>.pth
@@ -44,7 +44,7 @@ Training on the entire dataset will automatically save a model to the "saved_mod
 To train the model on just the first data point (as we did in our debugging) run the following commands:
 ```
 cd src
-python train.py --single -e=<number of epochs> -b=<number of batches>
+python train.py --single -e=<number of epochs> -b=<number of batches> -lr=<learning rate>
 ```
 
 For more information about commandline arguments, run the following command:
@@ -52,5 +52,16 @@ For more information about commandline arguments, run the following command:
 python train.py --help
 ```
 
+Additionally, after training (with any settings), the last prediction that the model makes will be output in the predictions folder, and will be called "final_prediction.png". We also log details about the training in src/runs using tensorboard.
+
 ## Evaluation
 
+To evaluate a trained model, run the following commands:
+```
+cd src
+python eval.py -m=<path to model checkpoint>
+```
+
+Additionally, there are optional parameters to turn on adaptation loss with ```--adaptation```, test on the validation set with ```--validation```, and limit the model to evaluating for the first n data points with ```-l=<limit>```.
+
+Note that, though adaptation loss has been implemented, with our current model the adaptation loss does not improve the model's performance, and simply makes the model take much longer to evaluate (since it trains for 100 iterations on each sample).

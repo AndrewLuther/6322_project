@@ -16,6 +16,7 @@ def train_FamNet(num_epochs=1, batch_limit=None, learning_rate=1e-5):
     """
     Train the FamNet model on the training dataset.
     """
+
     # Create the dataset and dataloader
     train_data = Dataset_Creator.get_training_dataset()
     train_loader = torch.utils.data.DataLoader(train_data, batch_size=1, shuffle=True)
@@ -68,15 +69,16 @@ def train_FamNet(num_epochs=1, batch_limit=None, learning_rate=1e-5):
         print(f"Epoch [{epoch+1}/{num_epochs}] Average Loss: {avg_epoch_loss:.6f}")
 
         # Save the last prediction
-        save_prediction(train_images, train_dmaps, pred_dmaps, "../predictions/test.png")
+        save_prediction(train_images, train_dmaps, pred_dmaps, "../predictions/final_prediction.png")
         Util.save_model(model)
 
 
 
-def train_FamNet_single_sample(num_epochs=20, learning_rate=1e-5):
+def train_FamNet_single_sample(num_epochs=50, learning_rate=1e-5):
     """
     Train the FamNet model on a single sample for multiple epochs.
     """
+
     # Create the dataset and dataloader
     train_data = Dataset_Creator.get_training_dataset()
     single_sample = torch.utils.data.Subset(train_data, [0])  # Use only the first sample
@@ -140,19 +142,20 @@ def train_with_args():
     # ref: https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
     # ref: https://docs.python.org/3/howto/argparse.html 
     parser = argparse.ArgumentParser()
+
     parser.add_argument('--single', action=argparse.BooleanOptionalAction, help="whether or not to train the model on one sample")
     parser.add_argument('-e', '--num_epochs', action="store", dest="num_epochs", default=None, help="the number of epochs to run the training for", type=int)
     parser.add_argument('-b', '--batch_limit', action="store", dest="batch_limit", default=None, help="batch cutoff to stop the training early", type=int)
+    parser.add_argument('-lr', '--learning_rate', action="store", dest="learning_rate", default=1e-5, help="the step size during gradient descent", type=float)
     args = parser.parse_args()
 
+    # note: defaults for num_epochs depend on if single sample or not (with single sample we likely want several epochs)
     if args.single:
-        if args.num_epochs == None: epochs = 50
-        else: epochs = args.num_epochs
-        train_FamNet_single_sample(num_epochs=epochs)
+        epochs = 50 if args.num_epochs == None else args.num_epochs
+        train_FamNet_single_sample(num_epochs=epochs, learning_rate=args.learning_rate)
     else:
-        if args.num_epochs == None: epochs = 1
-        else: epochs = args.num_epochs
-        train_FamNet(num_epochs=epochs, batch_limit=args.batch_limit)
+        epochs = 1 if args.num_epochs == None else args.num_epochs
+        train_FamNet(num_epochs=epochs, batch_limit=args.batch_limit, learning_rate=args.learning_rate)
 
 
 if __name__ == "__main__":

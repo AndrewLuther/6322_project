@@ -4,6 +4,8 @@ from data import Dataset_Creator
 from accuracy import Accuracy
 from test import test_FamNet
 
+import argparse
+
 from device import DEVICE
 
 # Getting the results from table 1
@@ -11,11 +13,11 @@ from device import DEVICE
 class Eval():
 
     @staticmethod
-    def get_FamNet_accuracies(adaptation=False, limit=None):
-        pred_counts = test_FamNet(adaptation=adaptation, limit=limit)
-        gt_counts = Util.get_ground_truth_counts(Dataset_Creator.get_val_dataset(), limit=limit)
+    def get_FamNet_accuracies(dataset, model_path="../saved_models/Apr_04_14_19_45.pth", adaptation=False, limit=None):
+        pred_counts = test_FamNet(dataset, adaptation=adaptation, limit=limit, model_path=model_path)
+        gt_counts = Util.get_ground_truth_counts(dataset, limit=limit)
 
-        mae = Accuracy.get_MAE(gt_counts, pred_counts) # Note, mae and rmse will only be accurate when there is no limit (divides by dataset length)
+        mae = Accuracy.get_MAE(gt_counts, pred_counts)
         rmse = Accuracy.get_RMSE(gt_counts, pred_counts)
         return mae, rmse
 
@@ -99,12 +101,34 @@ class Mean_Median_Predictor():
         median_predictions = median.repeat(len(dataset))
         return median_predictions
 
-if __name__ == "__main__":
-    test_dataset = Dataset_Creator.get_test_dataset()
-    val_dataset = Dataset_Creator.get_val_dataset()
+def eval_with_args():
+    # ref: https://stackoverflow.com/questions/16712795/pass-arguments-from-cmd-to-python-script 
+    # ref: https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
+    # ref: https://docs.python.org/3/howto/argparse.html 
+    parser = argparse.ArgumentParser()
 
-    #print(Experiment1.get_mean_predictor_accuracies(test_dataset))
-    print(Eval.get_FamNet_accuracies(False, 3))
+    parser.add_argument('--validation', action=argparse.BooleanOptionalAction, help="test with the validation dataset, instead of the test dataset")
+    parser.add_argument('--adaptation', action=argparse.BooleanOptionalAction, help="turns on adaptation loss, which does not improve results for our model")
+    parser.add_argument('-l', '--limit', action="store", dest="limit", default=None, help="an option to limit testing to the first n samples of the dataset", type=int)
+    parser.add_argument('-m', '--model_path', action="store", dest="model_path", 
+                        default="../saved_models/Apr_04_14_19_45.pth", help="the path to the saved model to be evaluated", type=str)
+    args = parser.parse_args()
+
+    dataset = Dataset_Creator.get_val_dataset() if args.validation else Dataset_Creator.get_test_dataset()
+
+    mae, rmse = Eval.get_FamNet_accuracies(dataset, model_path=args.model_path, adaptation=args.adaptation, limit=args.limit)
+    print(f"MAE:{mae} | RMSE:{rmse}")
+
+if __name__ == "__main__":
+    
+    # test_dataset = Dataset_Creator.get_test_dataset()
+    # # Used this to make sure method of accuracy prediction was correct
+    # #print(Experiment1.get_mean_predictor_accuracies(test_dataset))
+
+    # mae, rmse = Eval.get_FamNet_accuracies(test_dataset, adaptation=False, limit=3)
+    # print(f"MAE:{mae} | RMSE:{rmse}")
+
+    eval_with_args()
 
 
 

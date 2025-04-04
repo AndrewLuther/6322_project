@@ -30,7 +30,7 @@ class Util():
         for batch_idx, (images, dmaps, bboxes) in enumerate(dataset_loader):
             gt_counts.append(torch.round(torch.sum(dmaps)))
             if limit != None:
-                if batch_idx == limit: break
+                if batch_idx == limit-1: break
 
         gt_counts = torch.stack(gt_counts).to(DEVICE)
 
