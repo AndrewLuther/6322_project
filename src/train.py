@@ -12,7 +12,7 @@ from util import Util
 
 from device import DEVICE
 
-def train_FamNet(num_epochs=1, batch_limit=None, learning_rate=1e-5):
+def train_FamNet(num_epochs=1, batch_limit=None, learning_rate=1e-5, log=True):
     """
     Train the FamNet model on the training dataset.
     """
@@ -24,6 +24,15 @@ def train_FamNet(num_epochs=1, batch_limit=None, learning_rate=1e-5):
     # Initialize the model
     model = FamNet().to(DEVICE)
     model.train()  # Set the model to training mode
+
+    # Debugging/logging stuff
+    if log:
+        logger = Logger()
+
+        for name, module in model.density_prediction.named_modules():
+            if isinstance(module, torch.nn.Conv2d):  
+                module.register_forward_hook(logger.forward_hook)
+                module.register_full_backward_hook(logger.backward_hook)
 
     # Loss function and optimizer
     criterion = torch.nn.MSELoss().to(DEVICE)  # Mean Squared Error Loss
@@ -51,6 +60,7 @@ def train_FamNet(num_epochs=1, batch_limit=None, learning_rate=1e-5):
             # Compute the loss (MSE between predicted and ground truth density maps)
             loss = criterion(pred_dmaps, train_dmaps)
             epoch_loss += loss.item()
+            if log: logger.add_scalar('loss', loss)
             loss.backward()
             optimizer.step()
 
@@ -64,6 +74,12 @@ def train_FamNet(num_epochs=1, batch_limit=None, learning_rate=1e-5):
             if batch_limit != None and batch_idx == (batch_limit-1):
                 break
 
+            if batch_idx == 0 or batch_idx == 9:
+                save_prediction(train_images, train_dmaps, pred_dmaps, f"../predictions/prediction{batch_idx}.png")
+
+            if log: logger.increment()
+
+        if log: logger.finish()
         # Print the average loss for the epoch
         avg_epoch_loss = epoch_loss / len(train_loader)
         print(f"Epoch [{epoch+1}/{num_epochs}] Average Loss: {avg_epoch_loss:.6f}")

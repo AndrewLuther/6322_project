@@ -13,7 +13,7 @@ from device import DEVICE
 class Eval():
 
     @staticmethod
-    def get_FamNet_accuracies(dataset, model_path="../saved_models/Apr_04_14_19_45.pth", adaptation=False, limit=None):
+    def get_FamNet_accuracies(dataset, model_path="../saved_models/Apr_04_17_55_10.pth", adaptation=False, limit=None):
         pred_counts = test_FamNet(dataset, adaptation=adaptation, limit=limit, model_path=model_path)
         gt_counts = Util.get_ground_truth_counts(dataset, limit=limit)
 
@@ -98,7 +98,7 @@ class Mean_Median_Predictor():
         compare to. The model should perform better than this.
         """
         median = Mean_Median_Predictor._get_median_count_for_dataset()
-        median_predictions = median.repeat(len(dataset))
+        median_predictions = median.repeat(len(dataset)).to(DEVICE)
         return median_predictions
 
 def eval_with_args():
@@ -119,14 +119,35 @@ def eval_with_args():
     mae, rmse = Eval.get_FamNet_accuracies(dataset, model_path=args.model_path, adaptation=args.adaptation, limit=args.limit)
     print(f"MAE:{mae} | RMSE:{rmse}")
 
+def eval_mean_median():
+    """
+    This method was just used to check the mean and median counts to ensure that the dataset was correct
+    and the accuracy calculations were correct
+    """
+    test_dataset = Dataset_Creator.get_test_dataset()
+    val_dataset = Dataset_Creator.get_val_dataset()
+    
+    meantest_mae, meantest_rmse = Eval.get_mean_predictor_accuracies(test_dataset)
+    meanval_mae, meanval_rmse = Eval.get_mean_predictor_accuracies(val_dataset)
+
+    mediantest_mae, mediantest_rmse = Eval.get_median_predictor_accuracies(test_dataset)
+    medianval_mae, medianval_rmse = Eval.get_median_predictor_accuracies(val_dataset)
+
+    print("Validataion Set:")
+    print(f"MEAN: MAE={meanval_mae} | RMSE={meanval_rmse}")
+    print(f"MEDIAN: MAE={medianval_mae} | RMSE={medianval_rmse}")
+    print()
+    print("Test Set")
+    print(f"MEAN: MAE={meantest_mae} | RMSE={meantest_rmse}")
+    print(f"MEDIAN: MAE={mediantest_mae} | RMSE={mediantest_rmse}")
+
 if __name__ == "__main__":
     
     # test_dataset = Dataset_Creator.get_test_dataset()
-    # # Used this to make sure method of accuracy prediction was correct
-    # #print(Experiment1.get_mean_predictor_accuracies(test_dataset))
-
     # mae, rmse = Eval.get_FamNet_accuracies(test_dataset, adaptation=False, limit=3)
     # print(f"MAE:{mae} | RMSE:{rmse}")
+
+    #eval_mean_median()
 
     eval_with_args()
 
