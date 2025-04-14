@@ -10,6 +10,10 @@ from device import DEVICE
 class Util():
     @staticmethod
     def get_examples_from_bboxes(image, bboxes):
+        """
+        Given an image and bounding boxes, return a list of cropped images, according to the bounding boxes.
+        Returns a list of images that are the exemplar images.
+        """
         examples = []
         for bbox in bboxes:
             # tensor is [channels, height, width] | bbox is [x1,y1,x2,y2]
@@ -39,7 +43,7 @@ class Util():
     @staticmethod
     def save_model(model):
         """
-        Saves the trianed model to the saved_models folder so it can be used for evaluation.
+        Saves the trained model to the saved_models folder so it can be used for evaluation.
         """
         # 
         # ref: https://www.w3schools.com/python/python_datetime.asp
