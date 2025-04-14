@@ -54,6 +54,10 @@ python train.py --help
 
 Additionally, after training (with any settings), the last prediction that the model makes will be output in the predictions folder, and will be called "final_prediction.png". We also log details about the training in src/runs using tensorboard.
 
+## Model Download
+
+To download a sample trained model, download the .pth file from here: https://drive.google.com/drive/folders/1SePNVieQoO3RK4Fb4RkaFJaciu5ZomWr?usp=drive_link. Then, create a saved_models directory in the root directory of the project, and place the model in there. Then, evaluate the model (detailed next). 
+
 ## Evaluation
 
 To evaluate a trained model, run the following commands:
