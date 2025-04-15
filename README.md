@@ -10,13 +10,13 @@ To create a virtual environment on Windows, use:
 
 ```
 python -m venv .venv
-source .venv/bin/activate
+.venv\Scripts\activate
 ```
 
 To create a virtual environment on MacOS, use:
 ```
-python -m venv .venv
-.venv\Scripts\activate
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
 Then, install dependencies in your virtual environment with:
