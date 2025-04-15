@@ -66,6 +66,8 @@ cd src
 python eval.py -m=<path to model checkpoint>
 ```
 
+If you downloaded the model in the section exactly as described above, the code will, by default, find that model path without you needing to specify the path explicitly.
+
 Additionally, there are optional parameters to turn on adaptation loss with ```--adaptation```, test on the validation set with ```--validation```, and limit the model to evaluating for the first n data points with ```-l=<limit>```.
 
 Note that, though adaptation loss has been implemented, with our current model the adaptation loss does not improve the model's performance, and simply makes the model take much longer to evaluate (since it trains for 100 iterations on each sample).
