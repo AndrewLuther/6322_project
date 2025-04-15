@@ -9,7 +9,7 @@ We managed our packages using pip/virtualenv with python version 3.11.5.
 To create a virtual environment on Windows, use:
 
 ```
-python3 -m venv .venv
+python -m venv .venv
 source .venv/bin/activate
 ```
 
