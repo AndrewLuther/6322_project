@@ -56,7 +56,7 @@ Additionally, after training (with any settings), the last prediction that the m
 
 ## Model Download
 
-To download a sample trained model, download the .pth file from here: https://drive.google.com/drive/folders/1SePNVieQoO3RK4Fb4RkaFJaciu5ZomWr?usp=drive_link. Then, create a saved_models directory in the root directory of the project, and place the model in there. Then, evaluate the model (detailed next). 
+To download a sample trained model, download the .pth file from here: https://drive.google.com/drive/folders/1SePNVieQoO3RK4Fb4RkaFJaciu5ZomWr?usp=drive_link. Then, place the model in the "saved_models" directory.
 
 ## Evaluation
 
@@ -66,7 +66,7 @@ cd src
 python eval.py -m=<path to model checkpoint>
 ```
 
-If you downloaded the model in the section exactly as described above, the code will, by default, find that model path without you needing to specify the path explicitly.
+If you downloaded the sample model as described above (and placed it in the "saved_models" directory), the code will, by default, find that model path without you needing to specify the path explicitly.
 
 Additionally, there are optional parameters to turn on adaptation loss with ```--adaptation```, test on the validation set with ```--validation```, and limit the model to evaluating for the first n data points with ```-l=<limit>```.
 
