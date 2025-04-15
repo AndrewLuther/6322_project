@@ -18,7 +18,7 @@ def test_FamNet(dataset, model_path, learning_rate=10e-7, adaptation=True, limit
     pred_counts = []
 
     # load the trained weights
-    model.load_state_dict(torch.load(f"../saved_models/{model_path}"))
+    model.load_state_dict(torch.load(f"../saved_models/{model_path}", map_location=DEVICE))
 
     for batch_idx, (test_images, test_dmaps, test_bboxes) in enumerate(test_loader):
         # Prepare the data (move to device if using CUDA)
