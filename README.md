@@ -1,6 +1,6 @@
 # Reproducability Challenge: Learning to Count Everything
 Reproducibility project for EECS 6322 by Andrew Luther and Shahak Rozenblat.
-Code based on the paper "Learning to Count Everything" by Ranjan et al.
+The code was written based on the paper "Learning to Count Everything" by Ranjan et al.
 
 ## Requirements
 
